@@ -1,0 +1,105 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#
+#    Nylox is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Nylox is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+---
+- name: "Remove existing ip SSH signature"
+  shell:
+    grep "{{ ips[cnc_net][item].ip }}" ~/.ssh/known_hosts && ssh-keygen -f ~/.ssh/known_hosts -R {{ ips[cnc_net][item].ip }}
+  with_items:
+  - "{{ groups['all'] }}"
+  delegate_to: "localhost"
+  register: remove_ssh_sig
+  failed_when: false
+  changed_when: "remove_ssh_sig.rc != 1"
+  run_once: true
+  tags:
+  - clear
+  - auth
+
+- name: "Remove existing name SSH signature"
+  shell:
+    grep "{{ item }}" ~/.ssh/known_hosts && ssh-keygen -f ~/.ssh/known_hosts -R {{ item }}
+  with_items:
+  - "{{ groups['all'] }}"
+  delegate_to: "localhost"
+  register: remove_ssh_sig
+  failed_when: false
+  changed_when: "remove_ssh_sig.rc != 1"
+  run_once: true
+  tags:
+  - clear
+  - auth
+
+- set_fact:
+    is_reachable: "{{ lookup('pipe', 'ssh -o PasswordAuthentication=no -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ' ~ inventory_hostname ~ ' uptime') }}"
+  delegate_to: "localhost"
+  failed_when: false
+  ignore_errors: true
+  tags:
+  - conf
+
+- set_fact:
+    ansible_ssh_pass: "{{ sshauth_remote_pass }}"
+    ansible_sudo_pass: "{{ sshauth_remote_pass }}"
+  when:
+  - "is_reachable is not defined"
+  tags:
+  - conf 
+
+- name: "Deploy public key to user '{{ sshauth_remote_user }}'"
+  remote_user: "{{ sshauth_remote_user }}"
+  authorized_key:
+    user:      "{{ sshauth_remote_user }}"
+    key:       "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+    exclusive: "{{ sshauth_exclusive_key }}"
+  when:
+  - "is_reachable is not defined"
+  tags:
+  - conf 
+  - auth
+
+- name: "Deploy sudoers configuration for '{{ sshauth_remote_user }}'"
+  remote_user: "{{ sshauth_remote_user }}"
+  become: yes
+  template:
+    src:   "{{ item }}.j2"
+    dest:  "/etc/sudoers.d/{{ item }}"
+    owner: root
+    group: root
+  with_items:
+  - 00_sshauth
+  when:
+  - "is_reachable is not defined"
+  tags:
+  - conf 
+  - auth
+
+- name: "Deploy public key to user root"
+  remote_user: "{{ sshauth_remote_user }}"
+  become: yes
+  authorized_key:
+    user:      "root"
+    key:       "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+    exclusive: "{{ sshauth_exclusive_key }}"
+  when:
+  - "is_reachable is not defined"
+  tags:
+  - conf 
+  - auth
+
+

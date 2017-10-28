@@ -1,0 +1,120 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#
+#    Nylox is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Nylox is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+---
+- name: "Adding role '{{ item_name }}'"
+  debug: var=item_name
+
+- set_fact:
+    root_dir: "{{ playbook_dir }}/../roles/{{ item_name }}"
+
+- name: "Delete previous data"
+  file:
+    dest:  "{{ item }}"
+    state: absent
+  with_items:
+  - "{{ root_dir }}"
+  - "{{ playbook_dir }}/{{ item_name }}.yml"
+
+- name: "Create directories"
+  file:
+    dest:  "{{ item }}"
+    state: directory
+    owner: "root"
+    group: "root"
+    mode:  "u=rw,g=r,o=r"
+  with_items:
+  - "{{ root_dir }}"
+  - "{{ root_dir }}/defaults"
+  - "{{ root_dir }}/files"
+  - "{{ root_dir }}/files/pacman"
+  - "{{ root_dir }}/files/apt"
+  - "{{ root_dir }}/files/yum"
+  - "{{ root_dir }}/handlers"
+  - "{{ root_dir }}/meta"
+  - "{{ root_dir }}/tasks"
+  - "{{ root_dir }}/templates"
+  - "{{ root_dir }}/templates/pacman"
+  - "{{ root_dir }}/templates/apt"
+  - "{{ root_dir }}/templates/yum"
+  - "{{ root_dir }}/vars"
+
+- name: "Deploy default main.yml files"
+  template:
+    src:   "./main_{{ item }}.yml.j2"
+    dest:  "{{ root_dir }}/{{ item }}/main.yml"
+    owner: "root"
+    group: "root"
+    mode:  "u=rw,g=r,o=r"
+  with_items:
+  - tasks
+  - vars
+  - defaults
+  - meta
+
+- name: "Deploy default conf_pkg_mgr files"
+  template:
+    src:   "./main_tasks.yml.j2"
+    dest:  "{{ root_dir }}/tasks/conf_{{ item }}.yml"
+    owner: "root"
+    group: "root"
+    mode:  "u=rw,g=r,o=r"
+  with_items:
+  - pacman
+  - apt
+  - yum
+
+- name: "Create gitkeeps"
+  copy:
+    content: ""
+    dest:    "{{ item }}/.gitkeep"
+    owner:   "root"
+    group:   "root"
+    mode:    "u=rw,g=r,o=r"
+  with_items:
+  - "{{ root_dir }}/files"
+  - "{{ root_dir }}/files/pacman"
+  - "{{ root_dir }}/files/apt"
+  - "{{ root_dir }}/files/yum"
+  - "{{ root_dir }}/handlers"
+  - "{{ root_dir }}/templates"
+  - "{{ root_dir }}/templates/pacman"
+  - "{{ root_dir }}/templates/apt"
+  - "{{ root_dir }}/templates/yum"
+
+- name: "Deploy more defaults"
+  template:
+    src:   "{{ item }}.j2"
+    dest:  "{{ root_dir }}/{{ item }}"
+    owner: "root"
+    group: "root"
+    mode:  "u=rw,g=r,o=r"
+  with_items:
+  - README.md
+  - playbook.yml
+
+- name: "Create link to playbook"
+  file:
+    src:   "../roles/{{ item_name }}/playbook.yml"
+    dest:  "{{ playbook_dir }}/{{ item_name }}.yml"
+    state: link
+    owner: "root"
+    group: "root"
+    mode:  "u=rwx,g=rx,o=rx"
+    force: yes
+

@@ -1,0 +1,50 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#
+#    Nylox is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Nylox is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+---
+- name: "Add key for '{{ ansible_pkg_mgr }}'"
+  apt_key:
+    keyserver: keyserver.ubuntu.com
+    id: "{{ repo.key }}"
+  with_items:
+  - "{{ repos }}"
+  loop_control:
+    loop_var: "repo"
+  when:
+  - "'key' in repo.keys()"
+
+- name: "Delete required repositories for '{{ ansible_pkg_mgr }}'"
+  file:
+    path:     "/etc/apt/sources.list.d/{{ repo.name }}.list"
+    state:    "absent"
+  with_items:
+  - "{{ repos }}"
+  loop_control:
+    loop_var: "repo"
+
+- name: "Add required repositories for '{{ ansible_pkg_mgr }}'"
+  apt_repository:
+    repo:     "{{ repo.repo }}"
+    state:    "{{ repo.state | default('present') }}"
+    filename: "{{ repo.name }}"
+    update_cache: yes
+  with_items:
+  - "{{ repos }}"
+  loop_control:
+    loop_var: "repo"
+

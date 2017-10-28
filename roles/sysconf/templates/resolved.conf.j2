@@ -1,0 +1,8 @@
+[Resolve]
+{% if inventory_hostname in groups['dns-nodes'] %}
+DNS={% for node in groups['dns-nodes'][:3] %}{{ ips[cnc_net][node].ip }} {% endfor %}
+{% else %}
+DNS={{ external_dns | list | join(' ') }}
+{% endif %}
+
+Domains={{ fqdn }}

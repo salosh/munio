@@ -1,0 +1,11 @@
+[Unit]
+Description=Grafana service
+After=network.target
+
+[Service]
+ExecStart=/opt/grafana-{{ grafana_version }}/bin/grafana-server -config /opt/grafana-{{ grafana_version }}/conf/defaults.ini -homepath /opt/grafana-{{ grafana_version }} -pidfile /var/lock/grafana.pid
+ExecReload=/usr/bin/kill -HUP $MAINPID
+
+[Install]
+WantedBy=multi-user.target
+

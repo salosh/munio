@@ -1,0 +1,162 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#
+#    Nylox is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Nylox is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+---
+- name: "{{ node }} :: Generate http directories fact"
+  set_fact:
+    mctx_http_subdirs: |
+      {%- set prefix = conf.root_dir ~'/nodes' -%}
+      {%- set subdirz = { 'dirz': [], 'linkz': [] } %}
+      {%- set tmp = subdirz.dirz.append(prefix ~'/by-name/'~ node) %}
+      {%- set tmp = subdirz.dirz.append(prefix ~'/by-name/'~ node ~ '/ifacesd') %}
+      {%- set tmp = subdirz.dirz.append(prefix ~'/by-name/'~ node ~ '/networkd') %}
+      {%- set tmp = subdirz.dirz.append(prefix ~'/by-name/'~ node ~'/cidata') %}
+      {%-   set tmp = subdirz.linkz.append({ 'src': '../../nodes/by-name/'~ node ~'/cidata.iso', 'dest': '../dynamic/cidata/' ~ node ~ '.iso' }) %}
+      {%- for group in hostvars[node].group_names %}
+      {%-   set tmp = subdirz.dirz.append(prefix ~'/by-group/'~ group) %}
+      {%-   set tmp = subdirz.linkz.append({ 'src': '../../by-name/'~ node, 'dest': './by-group/'~ group ~ '/' ~ node}) %}
+      {%- endfor %}
+      {%- if 'ansible_product_uuid' in hostvars[node].keys() %}
+      {%-   set serial = hostvars[node].ansible_product_uuid %}
+      {%-   set tmp = subdirz.linkz.append({ 'src': '../by-name/'~ node, 'dest': './by-serial/' ~ serial }) %}
+      {%- endif %}
+      {%- if 'mac' in hostvars[node].keys() %}
+      {%-   set mac = hostvars[node].mac %}
+      {%-   set tmp = subdirz.linkz.append({ 'src': '../by-name/'~ node, 'dest': './by-mac/' ~ mac | replace(':', '-') }) %}
+      {%- endif %}
+      {%- for net in nets.keys() | sort %}
+      {%-   if 'vmacs' in nets[net].keys() %}
+      {%-     set tmp = subdirz.linkz.append({ 'src': '../by-name/'~ node, 'dest': './by-mac/' ~ nets[net].vmacs.byname[node] | replace(':', '-') }) %}
+      {%-   endif %}
+      {%- endfor %}
+      {{- (subdirz) -}}
+
+- name: "{{ node }} :: Create http subdirecties"
+  file:
+    dest:  "{{ item }}"
+    state: directory
+    owner: "{{ conf.username }}"
+    group: "{{ conf.username }}"
+    mode:  "u=rwx,g=rx,o=rx"
+  with_items:
+  - "{{- mctx_http_subdirs.dirz | list | unique | sort -}}"
+
+- name: "{{ node }} :: Deploy interfaces.d configuration"
+  template:
+    src: "ifacesd.cfg.j2"
+    dest:  "{{ conf.root_dir }}/nodes/by-name/{{ node }}/ifacesd/net_{{ net }}.cfg"
+    owner: "{{ conf.username }}"
+    group: "{{ conf.username }}"
+    mode:  "u=rwx,g=rx,o=rx"
+    force: yes
+  loop_control:
+    loop_var: "net"
+  with_items:
+  - "{{ nets.keys() | sort }}"
+  tags:
+  - conf
+
+- name: "{{ node }} :: Deploy networkd configuration"
+  template:
+    src: "networkd.cfg.j2"
+    dest:  "{{ conf.root_dir }}/nodes/by-name/{{ node }}/networkd/net_{{ net }}.network"
+    owner: "{{ conf.username }}"
+    group: "{{ conf.username }}"
+    mode:  "u=rwx,g=rx,o=rx"
+    force: yes
+  loop_control:
+    loop_var: "net"
+  with_items:
+  - "{{ nets.keys() | sort }}"
+  tags:
+  - conf
+
+- name: "{{ node }} :: Deploy cloud-init data files"
+  template:
+    src:   "{{ item }}.j2"
+    dest:  "{{ conf.root_dir }}/nodes/by-name/{{ node }}/cidata/{{ item }}"
+    owner: "{{ conf.username }}"
+    group: "{{ conf.username }}"
+    mode:  "u=rwx,g=rx,o=rx"
+    force: yes
+  with_items:
+  - user-data
+  - meta-data
+  tags:
+  - conf
+
+- name: "{{ node }} :: Create cidata ISO file for"
+  shell:
+    "{{ item }}"
+  with_items:
+  - "mkisofs -o '{{ conf.root_dir }}/nodes/by-name/{{ node }}/cidata.iso' -V cidata -r -J {{ conf.root_dir }}/nodes/by-name/{{ node }}/cidata"
+
+- name: "{{ node }} :: Deploy Yaml host vars"
+  copy:
+    content: "{{ hostvars[node] | to_nice_yaml(indent=2) }}"
+    dest:    "{{ conf.root_dir }}/nodes/by-name/{{ node }}/vars.yml"
+    owner:   "{{ conf.username }}"
+    group:   "{{ conf.username }}"
+    mode:    "u=rwx,g=rx,o=rx"
+    force:   yes
+
+- name: "{{ node }} :: Deploy Json host vars"
+  copy:
+    content: "{{ hostvars[node] | to_nice_json(indent=2) }}"
+    dest:    "{{ conf.root_dir }}/nodes/by-name/{{ node }}/vars.json"
+    owner:   "{{ conf.username }}"
+    group:   "{{ conf.username }}"
+    mode:    "u=rwx,g=rx,o=rx"
+    force:   yes
+
+- name: "{{ node }} :: Deploy specific var files"
+  copy:
+    content: "{{ hostvars[node][item.source_var] }}"
+    dest:    "{{ conf.root_dir }}/nodes/by-name/{{ node }}/{{ item.target_file }}"
+    owner:   "{{ conf.username }}"
+    group:   "{{ conf.username }}"
+    mode:    "u=rwx,g=rx,o=rx"
+    force:   yes
+  with_items:
+  - {'source_var': 'inventory_hostname'   , 'target_file': 'hostname' }
+  - {'source_var': 'mac'                  , 'target_file': 'mac'      }
+  - {'source_var': 'ansible_product_uuid' , 'target_file': 'serial'   }
+  when:
+  - "item.source_var in hostvars[node].keys()"
+#  - {'source_var': '', 'target_file': ''}
+
+- name: "{{ node }} :: Create http checksum per node"
+  include_tasks: "./checksum.yml"
+  with_filetree:
+  - "{{ conf.root_dir }}/nodes/by-name/{{ node }}"
+  loop_control:
+    loop_var: "diritem"
+    label: "{{ diritem['root'] }}/{{ diritem['path'] }}"
+
+- name: "{{ node }} :: Create http sublinks"
+  file:
+    src: "{{ item.src }}"
+    dest: "{{ conf.root_dir }}/nodes/{{ item.dest }}"
+    state: link
+    owner: "{{ conf.username }}"
+    group: "{{ conf.username }}"
+    mode:  "u=rwx,g=rx,o=rx"
+    force: yes
+  with_items:
+  - "{{ mctx_http_subdirs.linkz | list | sort }}"
+

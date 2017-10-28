@@ -1,0 +1,36 @@
+//
+// Do any local configuration here
+//
+
+// Consider adding the 1918 zones here, if they are not used in your
+// organization
+//include "/etc/bind/zones.rfc1918";
+
+zone "{{ fqdn }}" IN {
+        type master;
+        file "domain.zone";
+        allow-update { none; };
+};
+
+{% set revdns = nets[cnc_net].cidr | ipaddr('revdns') %}
+zone "{{ revdns.split('.')[1:] | join('.') }}" IN {
+        type master;
+        file "domain.rr.zone";
+        allow-update { none; };
+};
+
+zone "lb" IN {
+        type forward;
+        forward only;
+        forwarders {
+          // query local consul first
+          {{ ips[cnc_net][inventory_hostname].ip }} port 8600;
+          // then other nodes
+{% for dns_node in groups['lb-nodes'] %}
+{%   if inventory_hostname != dns_node %}
+          {{ ips[cnc_net][dns_node].ip }} port 8600;
+{%   endif %}
+{% endfor %}
+        };
+};
+

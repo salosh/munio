@@ -1,0 +1,27 @@
+{% extends "file.j2" %}
+
+{% block content %}
+---
+pacman:
+  packages: []
+  services: []
+
+apt:
+  packages: []
+  services: []
+
+yum:
+  packages: []
+  services: []
+
+{% raw %}conf: "{{ vars[ansible_pkg_mgr] | default({}) }}"{% endraw %}
+
+#bind_host: "127.0.0.1"
+#bind_port: "12345"
+
+service_final:
+  state:   "restarted"
+  enabled: "yes"
+
+{% endblock %}
+

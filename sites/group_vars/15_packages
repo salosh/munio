@@ -1,0 +1,193 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#
+#    Nylox is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Nylox is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Common variables file        
+# Packages definitions
+#
+
+pacman_pkg_group:
+  boot:
+  - grub
+  - os-prober
+  filesystem:
+  - lvm2
+  - efibootmgr
+  - dosfstools
+#  - nfs-utils
+#  - mkinitcpio-nfs-utils
+#  - btrfs-progs
+#  - squashfs-tools
+#  - libisoburn
+#  - cdrtools
+  - parted
+  - arch-install-scripts
+  net:
+  - dhcpcd
+  - lsof
+  - tcpdump
+#  - netcat
+#  - gnu-netcat
+  - openbsd-netcat
+  - ethtool
+  - lshw
+  - wget
+  - curl
+  - socat
+#  - lldpd
+#  - whois
+  - ipcalc
+  - sipcalc
+  - net-tools
+#  - nethogs
+  - nmap
+  - traceroute
+#  - dsniff
+  tools:
+  - sudo
+  - sshpass
+  - openssh
+  - cronie
+  - rsync
+  - dmidecode
+  - ansible
+  - git
+  - zip
+  - unzip
+  - mc
+  - tree
+  - screen
+  - bash-completion
+  - bind-tools
+  - devtools
+  - colord
+  - dialog
+  - strace
+  - bzip2
+  - darkhttpd
+  - iptables
+  - ebtables
+  monitor:
+  - htop
+  - iotop
+  - sysstat
+  - iperf
+  - hdparm
+  python:
+  - python
+  - python-pip
+  - python-netaddr
+#  - python2
+#  - python2-pip
+#  - python2-netaddr
+  devops:
+  - apache
+  - dhcp
+  - tftp-hpa
+  - redis
+  - docker
+  ui:
+  - xorg-xrandr
+  - xorg-server
+  - xorg-xinit
+  - xorg-server-common
+  - xorg-server-xvfb
+  - mesa
+  - xf86-input-synaptics
+  - xorg-twm
+  - xorg-xclock
+  - xterm
+  - alsa-utils
+  - ttf-dejavu
+  - xfce4
+  - firefox
+  - cdrdao
+  - libao
+  - libmad
+  - dvd+rw-tools
+  - brasero
+  virt:
+  - qemu
+  - virt-install
+  - virt-manager
+  - virt-viewer
+  - dnsmasq
+  - mkisolinux
+
+apt_pkg_group:
+  boot:
+  - grub
+  - os-prober
+  filesystem:
+  - acl
+  - apt-transport-https
+  - aptitude
+  - ceph-common
+  - xfsprogs
+  net:
+  - dnsutils
+  - bridge-utils
+  - ethtool
+  - ifenslave
+  - netcat
+  - tcpdump
+  - traceroute
+  - ntp
+  - ntpdate
+  tools:
+  - bzip2
+  - zip
+  - curl
+  - default-jre
+  - iptables
+  - locales
+  - lsof
+  - man-db
+  - mariadb-client
+  - mc
+  - nano
+  - rsync
+  - screen
+  - strace
+  - tree
+  - ubuntu-cloud-keyring
+  - uuid-runtime
+  - vim
+  - wget
+  - qemu-utils
+  - bash-completion
+  monitor:
+  - bmon
+  - htop
+  - iperf
+  - nmon
+  - sysstat
+  python:
+  - python-flask
+  - python-minimal
+  - python-mysqldb
+  - python-netaddr
+  - python3-flask
+  - python3-mysqldb
+  - python3-neutronclient
+  devops:
+  - git
+  - jq
+
+yum_pkg_group: []
+
+pkg_group: "{{ vars[ansible_pkg_mgr ~ '_pkg_group'] }}"
+

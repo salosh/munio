@@ -1,0 +1,103 @@
+#!/bin/bash
+# TODO refactor XXX
+set -x
+set -e
+
+export MAC=$(ip link show eth0 | grep link | tr -d ":" | awk '{print $2}')
+
+function vport() {
+  cat <<'EOF' > /etc/systemd/system/vport.service
+[Unit]
+Description=Vport
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/vport
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+  cat <<'EOF' > /usr/bin/vport
+#!/bin/bash
+
+while true
+do
+  if [[ $(file /dev/vport1p1 | grep special) ]]; then
+    socat /dev/vport1p1 TCP:127.0.0.1:22
+  fi
+  sleep 10
+done
+EOF
+
+  chmod +x /usr/bin/vport
+  systemctl enable vport
+}
+
+cat <<'EOF' > /etc/sudoers.d/sudo
+%sudo ALL=(ALL) NOPASSWD:ALL
+EOF
+
+wget http://{{ nets[cnc_net]['gateway'] }}/static/interfaces -O /etc/network/interfaces
+
+cat <<'EOF' > /etc/resolvconf/resolv.conf.d/base
+nameserver 8.8.8.8
+EOF
+
+wget http://{{ nets[cnc_net]['gateway'] }}/static/sources.list -O /etc/apt/sources.list
+
+cat <<'EOF' > /etc/systemd/system/ppsetup.service
+[Unit]
+Description=PeePee Setup
+
+[Service]
+ExecStart=/usr/bin/ppsetup
+Type=oneshot
+RemainAfterExit=yes
+
+StandardOutput=journal
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+  cat <<'EOF' > /usr/bin/ppsetup
+#!/bin/bash
+
+[ ! -f /var/cisetup.iso ] && exit 0 || echo "${0}: Installing PeePee"
+
+blkid | grep cisetup
+if [ $? -eq 0 ]; then
+  mount -L cisetup /mnt
+  [ ! -f /mnt/setup.sh ] && exit 2
+else
+  mount /var/cisetup.iso /mnt
+  [ ! -f /mnt/setup.sh ] && exit 2
+fi
+
+cp /mnt/setup.sh /tmp/
+chmod +x /tmp/setup.sh
+
+/tmp/setup.sh
+if [ $? -eq 0 ]; then
+  echo "${0}: Installation completed"
+  mv /var/cisetup.iso /var/cisetup.iso.completed
+  reboot
+else
+  echo "${0}: Installation failed"
+  exit 1
+fi
+
+EOF
+
+chmod +x /usr/bin/ppsetup
+systemctl enable ppsetup
+
+if [ "x${MAC}" != "x" ]; then
+  wget http://{{ nets[cnc_net]['gateway'] }}/static/cisetup.iso -O /var/cisetup.iso
+fi
+
+nc -l -p 5410 &
+sleep 5
+
+exit 0

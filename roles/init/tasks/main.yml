@@ -1,0 +1,24 @@
+---
+- name: "Verify user input"
+  fail: 
+    msg: >-
+      Init action '{{ init_action }}' not allowed,
+      select from '{{ allowed_init_actions | join(',') }}'
+  when:
+  - "init_action not in allowed_init_actions"
+
+- name: "Add site '{{ item_name }}'"
+  include_tasks: "./add_site.yml"
+  when:
+  - "init_action == 'site'"
+
+- name: "Add role '{{ item_name }}'"
+  include_tasks: "./add_role.yml"
+  when:
+  - "init_action == 'role'"
+
+- name: "Verify '{{ item_name }}'"
+  include_tasks: "./verify.yml"
+  when:
+  - "init_action == 'verify'"
+

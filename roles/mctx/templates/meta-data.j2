@@ -1,0 +1,7 @@
+instance-id: {{ node | to_uuid }}
+hostname: {{ node }}
+local-hostname: {{ node }}
+public-keys:
+  - |
+    {{ lookup('file', lookup('env','HOME') + '/.ssh/id_rsa.pub') }}
+

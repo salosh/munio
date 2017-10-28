@@ -1,0 +1,20 @@
+$TTL 86400 
+@	IN	SOA	ns1.{{ fqdn }}.	hostmaster.{{ fqdn }}. (
+			5410       ; serial                     
+			21600      ; refresh after 6 hours                     
+			3600       ; retry after 1 hour                     
+			604800     ; expire after 1 week                     
+			86400 )    ; minimum TTL of 1 day        
+
+
+@	IN	NS	ns1.
+
+{% for node in groups['dns-nodes'] %}
+{{ ips[cnc_net][node].ip | ipaddr('revdns') }}     IN	PTR	ns{{ loop.index }}.{{ fqdn }}.
+{% endfor %}
+
+{% for node in groups['all'] %}
+{%   if node not in groups['dns-nodes'] %}
+{{ ips[cnc_net][node].ip.split('.') | reverse | list | join('.') }}    IN      PTR     {{ node }}.
+{%   endif %}
+{% endfor %}

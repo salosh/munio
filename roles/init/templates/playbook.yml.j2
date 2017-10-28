@@ -1,0 +1,11 @@
+{% extends "file.j2" %}
+
+{% block content %}
+---
+- hosts: localhost
+#  gather_facts: no
+#  no_log: True
+  roles:
+  - { role: {{ item_name }} }
+{% endblock %}
+

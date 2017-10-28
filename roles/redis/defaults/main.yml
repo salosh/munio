@@ -1,0 +1,68 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#
+#    Nylox is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Nylox is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+---
+pacman:
+  packages:
+  - redis
+  - python-redis
+  services:
+  - redis
+  username:  "redis"
+  groupname: "redis"
+  root_dir:  "/var/lib/redis"
+  files:
+  - name: "redis.conf"
+    path: "/etc"
+
+apt:
+  packages:
+  - redis-server
+  - redis-sentinel
+  - redis-tools
+  services:
+  - redis-server
+  - redis-sentinel
+  username:  "redis"
+  groupname: "redis"
+  root_dir:  "/var/lib/redis"
+  files:
+  - name: "redis.conf"
+    path: "/etc/redis"
+  - name: "sentinel.conf"
+    path: "/etc/redis"
+
+
+yum:
+  packages:  []
+  services:  []
+  username:  ""
+  groupname: ""
+  root_dir:  ""
+  conf_file: ""
+  conf_dir:  ""
+
+conf: "{{ vars[ansible_pkg_mgr] | default({}) }}"
+
+bind_host: "{{ cnc_ip }}"
+bind_port: "6379"
+
+service_final:
+  state: "restarted"
+  enabled: "yes"
+

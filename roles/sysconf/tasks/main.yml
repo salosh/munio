@@ -1,0 +1,55 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#
+#    Nylox is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Nylox is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+---
+- name: "Configure DNS settings"
+  import_tasks: "./dns.yml"
+
+- name: "Configure grub"
+  import_tasks: "./grub.yml"
+
+- name: "Configure networking"
+  import_tasks: "./network.yml"
+
+- name: "Configure operating-system settings"
+  import_tasks: "./os.yml"
+
+- name: "Install packages"
+  import_tasks: "./bin.yml"
+
+- name: "Run final action '{{ sysconf_final_op }}'"
+  shell: |
+      {% set cmd = [] %}
+      {% set tmp = cmd.append('sleep 2') %}
+      {% set tmp = cmd.append('&&') %}
+      {% if sysconf_final_op in ['reboot', 'restart'] %}
+      {%   set tmp = cmd.append('shutdown -r now') %}
+      {% elif sysconf_final_op in ['shutdown', 'stop', 'destroy'] %}
+      {%   set tmp = cmd.append('shutdown -h now') %}
+      {% endif %}
+      {% set tmp = cmd.append('"Ansible triggered restart"') %}
+      {{ (cmd | join(' ') ) }}
+  async: 1
+  poll: 0
+  become: yes
+  ignore_errors: true
+  when:
+  - "sysconf_final_op is defined"
+  - "sysconf_final_op != 'NOP'"
+  tags:
+  - conf

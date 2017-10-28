@@ -1,0 +1,52 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#
+#    Nylox is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Nylox is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+---
+- set_fact:
+    username:  "elasticsearch"
+    groupname: "elasticsearch"
+    root_dir:  "/var/lib/elasticsearch"
+    conf_file: "elasticsearch.yml"
+    conf_dir:  "/etc/elasticsearch"
+  tags:
+  - always
+
+- name: "Deploy '{{ ansible_pkg_mgr }}' based configuration"
+  template:
+    src:   "{{ ansible_pkg_mgr }}/{{ conf_file }}.j2"
+    dest:  "{{ conf_dir }}/{{ conf_file }}"
+    owner: "{{ username }}"
+    group: "{{ groupname }}"
+    mode:  "u=rw,g=r,o="
+    force: yes
+  tags:
+  - conf
+
+- name: "Deploy daemon additional configuration"
+  template:
+    src:   "{{ ansible_pkg_mgr }}/{{ item }}.j2"
+    dest:  "{{ conf_dir }}/{{ item }}"
+    owner: "{{ username }}"
+    group: "{{ groupname }}"
+    mode:  "u=rw,g=r,o="
+    force: yes
+  with_items:
+  - "log4j2.properties"
+  tags:
+  - conf
+

@@ -1,0 +1,49 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#
+#    Nylox is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Nylox is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+---
+pacman:
+  repos: []
+  packages:
+  - elasticsearch
+  services:
+  - elasticsearch
+
+apt:
+  repos:
+  - name: "elasticsearch"
+    repo: "deb http://artifacts.elastic.co/packages/5.x/apt stable main"
+    key:  "D27D666CD88E42B4"
+  packages:
+  - elasticsearch
+  services:
+  - elasticsearch
+
+yum:
+  repos:    []
+  packages: []
+  services: []
+
+conf: "{{ vars[ansible_pkg_mgr] | default({}) }}"
+bind_host: "{{ ips[cnc_net][inventory_hostname].ip }}"
+bind_port: "9200"
+
+service_final:
+  state: "restarted"
+  enabled: "yes"
+

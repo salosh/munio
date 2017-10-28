@@ -1,0 +1,37 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#
+#    Nylox is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Nylox is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Common variables file        
+# General settings
+#
+
+# {{ lookup('env','PWD') }}
+dir_work: "/opt/nylox"
+dir_lib: "{{ dir_work }}/lib"
+dir_bin: "{{ dir_work }}/bin"
+#dir_images: "{{ dir_lib }}/images"
+dir_images: "/DATA/isos"
+dir_reqs: "/srv/nylox/reqs"
+
+# Error - overrides later variables
+# https://github.com/ansible/ansible/issues/31689
+#site_id: "default"
+rack_id: 5
+rack_type: v
+
+default_locale: "en_US.UTF-8"
+

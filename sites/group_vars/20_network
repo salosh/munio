@@ -1,0 +1,59 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#
+#    Nylox is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Nylox is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Common variables file        
+# Network settings
+#
+
+---
+networks:
+  apipa:
+    cidr: "169.254.0.0/16"
+    hostmin: "169.254.0.1"
+    hostmax: "169.254.54.10"
+    tags: "assign"
+    seg: "0001"
+  classa:
+    cidr: "10.0.0.0/8"
+    tags: "virtbridge,no_dhcp,assign,external,dhcp_external"
+    seg: "0002"
+  classb:
+    cidr: "172.16.0.0/12"
+    tags: "assign,dhcp"
+    seg: "0003"
+  classc:
+    cidr: "192.168.1.0/24"
+    tags: "assign"
+    seg: "0004"
+
+#iface_allocations: "ifi=0:tags=static,disabled,dhcp,xxx:net=classa"
+rack_id: 5
+
+cnc_net: classa
+br_net: classa
+
+ofst_groupid: 4
+ofst_nodeid: 1
+ofst_rackid: 1
+
+external_dns:
+  - 8.8.8.8
+  - 8.8.4.4
+
+# ['online', 'offline', 'verify']
+connectivity_mode: "online"
+

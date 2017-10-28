@@ -1,0 +1,145 @@
+#
+#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#
+#    Nylox is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Nylox is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Auto network configuration for '{{ net }}' network.
+#
+#   Network CIDR: "{{ nets[net].cidr }}"
+#   Network tags: "{{ nets[net].tags | list | sort | join(',') }}"
+#
+{% if net in allocations.bynet.keys() %}
+{%   if node in allocations.bynet[net].keys() %}
+
+{% set alloc = allocations.bynet[net][node] %}
+{% set tagz  = alloc.tags %}
+{% set ifacez = alloc.ifnames %}
+{% set paramz = alloc.params %}
+{#----------------------  Bonding ----------------------#}
+{% if paramz.tags | search("bond") %}
+{%   set bond_name = 'b' ~ net %}
+{%   for slave in ifacez | sort %}
+auto {{ slave }}
+iface {{ slave }} inet manual
+	bond-master     {{ bond_name }}
+#	bond-primary	{{ ifacez[0] }}
+{%     if 'bond_ab' in tagz %}
+        bond-mode       active-backup
+{%     elif 'bond_lacp' in tagz %}
+        bond-mode       802.3ad
+{%     endif %}
+{%   endfor %}
+
+{%   if 'hotplug' in tagz %}
+allow-hotplug {{ bond_name }}
+{%   else   %}
+auto {{ bond_name }}
+{%   endif  %}
+{%   if 'dhcp' in tagz %}
+iface {{ bond_name }} inet dhcp
+{%   elif 'manual' in tagz %}
+iface {{ bond_name }} inet manual
+        address         {{ ips[net][node].ip   }}
+        netmask         {{ nets[net].netmask   }}
+        broadcast       {{ nets[net].broadcast }}
+        network         {{ nets[net].network   }}
+{%   else   %}
+iface {{ bond_name }} inet static
+        address         {{ ips[net][node].ip   }}
+        netmask         {{ nets[net].netmask   }}
+        broadcast       {{ nets[net].broadcast }}
+        network         {{ nets[net].network   }}
+{%   endif  %}
+{%   if paramz.metric is defined %}
+{%     if paramz.metric | int == 1 %}
+        post-up  route add default gw {{ nets[net].gateway }} metric {{ paramz.metric }}
+        pre-down route del default gw {{ nets[net].gateway }}
+{%     elif paramz.metric | int > 1 %}
+        post-up  ip route add {{ nets[net].network }}/{{ nets[net].prefix }} via {{ nets[net].gateway }} dev {{ bond_name }} metric {{ paramz.metric }}
+        pre-down ip route del {{ nets[net].network }}/{{ nets[net].prefix }}
+{%     endif  %}
+{%   else %}
+        post-up route add default gw {{ nets[net].gateway }}
+        pre-down route del default gw {{ nets[net].gateway }}
+{%   endif  %}
+{%   if (nets[net].route is defined) and (nets[net].route | length > 0) %}
+{%     for route in nets[net].route %}
+        up route add -net {{ route }} dev $IFACE gw {{ nets[net].gateway }}
+        down route del {{ route }}
+{%     endfor %}
+{%   endif %}
+{%   if 'bond_ab' in tagz %}
+        bond-mode       active-backup
+{%   elif 'bond_lacp' in tagz   %}
+        bond-mode       802.3ad
+{%   endif  %}
+        bond-miimon     100
+        bond-slaves     {{ ifacez | join(',') }}
+        bond-downdelay  200
+        bond-updelay    200
+        bond-xmit_hash_policy layer2+3
+{%   if 'manual' in tagz %}
+        up ip link set dev $IFACE up
+        down ip link set dev $IFACE down
+{%   endif  %}
+{% else     %}
+{%   set iface_name = ifacez | join(" ") %}
+{#---------------------- Single ----------------------#}
+{%   if 'hotplug' in tagz %}
+allow-hotplug {{ iface_name }}
+{%   else   %}
+auto {{ iface_name }}
+{%   endif  %}
+{%   if 'dhcp' in tagz %}
+iface {{ iface_name }} inet dhcp
+{%   elif 'manual' in tagz %}
+iface {{ iface_name }} inet manual
+        address         {{ ips[net][node].ip }}
+        netmask         {{ nets[net].netmask }}
+        broadcast       {{ nets[net].broadcast }}
+        network         {{ nets[net].network }}
+{%   else   %}
+iface {{ iface_name }} inet static
+        address         {{ ips[net][node].ip }}
+        netmask         {{ nets[net].netmask }}
+        broadcast       {{ nets[net].broadcast }}
+        network         {{ nets[net].network }}
+{%   endif  %}
+{%   if paramz.metric is defined %}
+{%     if paramz.metric | int == 1 %}
+        post-up route add default gw {{ nets[net].gateway }} metric {{ paramz.metric }}
+        pre-down route del default gw {{ nets[net].gateway }}
+{%     elif paramz.metric | int > 1 %}
+        post-up  ip route add {{ nets[net].network }}/{{ nets[net].prefix }} via {{ nets[net].gateway }} dev {{ iface_name }} metric {{ paramz.metric }}
+        pre-down ip route del {{ nets[net].network }}/{{ nets[net].prefix }}
+{%     endif  %}
+{%   else %}
+        post-up  route add default gw {{ nets[net].gateway }}
+        pre-down route del default gw {{ nets[net].gateway }}
+{%   endif  %}
+{%   if (nets[net].route is defined) and (nets[net].route | length > 0) %}
+{%     for route in nets[net].route %}
+        up route add -net {{ route }} dev $IFACE gw {{ nets[net].gateway }}
+        down route del {{ route }}
+{%     endfor %}
+{%   endif    %}
+{%   if 'manual' in tagz %}
+        up ip link set dev $IFACE up
+        down ip link set dev $IFACE down
+{%   endif  %}
+{% endif    %}
+
+{% endif    %}
+{% endif    %}
+# TODO align or move conditional to calling task

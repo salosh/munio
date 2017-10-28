@@ -1,0 +1,78 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#
+#    Nylox is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Nylox is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Auto DHCP configuration for '{{ net }}' network.
+#
+#   Network CIDR: "{{ nets[net].cidr }}"
+#   Network tags: "{{ nets[net].tags | list | sort | join(',') }}"
+#
+
+subnet {{ nets[net].network }} netmask {{ nets[net].netmask }} {
+{% if 'dhcp' in nets[net].tags and ('no_dhcp' not in nets[net].tags or 'dhcp_external' in nets[net].tags) %}
+    authoritative;
+#    range dynamic-bootp     {{ nets[net].hostmin }} {{ nets[net].hostmax }};
+#    range                   {{ nets[net].hostmin }} {{ nets[net].hostmax }};
+    option subnet-mask      {{ nets[net].netmask }};
+    option routers          {{ nets[net].gateway }};
+    next-server             {{ nets[net].gateway }};
+    option domain-name-servers 8.8.8.8, 8.8.4.4;
+{%   if 'pxe' in nets[net].tags %}
+    class "pxeclients" {
+        match if substring (option vendor-class-identifier, 0, 9) = "PXEClient";
+        if option pxe-system-type = 00:02 {
+              filename "ia64/elilo.efi";
+        } else if option pxe-system-type = 00:06 {
+              filename "grub/grub-x86.efi";
+        } else if option pxe-system-type = 00:07 {
+              filename "default/grubnetx64.efi.signed";
+        } else {
+              filename "{{ dhcpd_filename | d('lpxelinux.0') }}";
+        }
+   }
+{%   endif %}
+{% else %}
+# Network DHCP disabled
+{% endif %}
+}
+
+# Virtual hosts group
+group {
+{%   for host in groups['all'] | sort %}
+{%     set mac = ips[net][host].vmac | default('ERROR') %}
+    host {{ net }}--{{ host }}--{{ mac.replace(':', '-') }} {
+        hardware ethernet       {{ mac }};
+        fixed-address           {{ ips[net][host].ip }};
+        server-name             "{{ host }}.{{ fqdn }}";
+        option host-name        "{{ host }}.{{ fqdn }}";
+    }
+{%   endfor %}
+}
+
+# physical hosts group
+group {
+{% for host in groups['all'] | sort %}
+{%   if 'mac' in hostvars[host].keys() %}
+{%     set mac = hostvars[host].mac %}
+    host {{ net }}--{{ host }}--{{ mac.replace(':', '-') }} {
+        hardware ethernet       {{ mac }};
+        fixed-address           {{ ips[net][host].ip }};
+        server-name             "{{ host }}.{{ fqdn }}";
+        option host-name        "{{ host }}.{{ fqdn }}";
+    }
+{%   endif %}
+{% endfor %}
+}

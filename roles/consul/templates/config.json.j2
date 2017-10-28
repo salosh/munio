@@ -1,0 +1,66 @@
+{# Author: Salo Shp <saloshp@gmail.com>                                      #}
+{#                                                                           #}
+{#    This file is part of Nylox. <https://github.com/nylox/nylox.git> #}
+{#                                                                           #}
+{#    Nylox is free software: you can redistribute it and/or modify        #}
+{#    it under the terms of the GNU General Public License as published by   #}
+{#    the Free Software Foundation, either version 3 of the License, or      #}
+{#    (at your option) any later version.                                    #}
+{#                                                                           #}
+{#    Nylox is distributed in the hope that it will be useful,             #}
+{#    but WITHOUT ANY WARRANTY; without even the implied warranty of         #}
+{#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the          #}
+{#    GNU General Public License for more details.                           #}
+{#                                                                           #}
+{#    You should have received a copy of the GNU General Public License      #}
+{#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.       #}
+{#                                                                           #}
+{
+    "datacenter": "{{ fqdn | regex_replace('\.', '-') }}",
+    "data_dir": "/var/consul",
+    "log_level": "{{ consul_log_level }}",
+    "enable_syslog": true,
+    "enable_script_checks": true,
+    "disable_anonymous_signature": true,
+    "disable_update_check": true,
+{% if consul_config_mode == 'server' %}
+    "server": true,
+    "ui_dir": "/opt/consul/ui/dist",
+{%    if bootstrap_expect is defined %}
+    "bootstrap_expect": {{ bootstrap_expect }},
+{%    endif %}
+{% else %}
+    "server": false,
+{% endif %}
+{% if encrypt_consul is defined %}
+    "encrypt": "{{ consul_encryption_key }}",
+    "ca_file": "/etc/consul/ssl/ca.crt",
+    "cert_file": "/etc/consul/ssl/ca.cert",
+    "key_file": "/etc/consul/ssl/consul.key",
+    "verify_incoming": false,
+    "verify_outgoing": false,
+{% endif %}
+{% set retry_join = [] %}
+{% for node in groups['consul-nodes'] %}
+{%   set tmp = retry_join.append('"' ~ ips[cnc_net][node].ip ~ '"') %}
+{% endfor %}
+    "retry_join": [{{ retry_join | join(',') }}],
+    "node_name": "{{ inventory_hostname }}",
+    "bind_addr": "{{ cnc_ip }}",
+    "client_addr": "0.0.0.0",
+    "dns_config": {
+      "allow_stale": true,
+      "max_stale": "5s",
+      "service_ttl": {
+{% for svc in lb_services | sort %}
+{%   if 'dns_ttl' in lb_services[svc].keys() %}
+        "{{ svc }}": "{{ lb_services[svc].dns_ttl }}",
+{%   endif %}
+{% endfor %}
+        "*": "5s"
+      },
+      "enable_truncate": false,
+      "only_passing": false
+    }
+}
+

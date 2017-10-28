@@ -1,0 +1,17 @@
+#
+# /etc/hosts: static lookup table for host names
+#
+
+#<ip-address>   <hostname.domain.org>   <hostname>
+127.0.0.1       localhost.localdomain   localhost
+::1             localhost.localdomain   localhost
+
+{% for net in nets.keys() | sort %}
+# Net '{{ net }}' hosts
+{%   for key in ips[net].keys() | sort %}
+{%     if 'ip' in ips[net][key].keys() and key != 'localhost' %}
+{% if net != cnc_net %}# {% endif %}{{ ips[net][key].ip }}	{{ key }}.{{ fqdn }}	{{ key }}
+{%     endif %}
+{%   endfor %}
+{% endfor %}
+

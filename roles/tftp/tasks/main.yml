@@ -1,0 +1,95 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#
+#    Nylox is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Nylox is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+---
+- name: "Install packages"
+  vars:
+    packages: "{{ conf.packages }}"
+  include_tasks: "{{ role_path }}/../common/tasks/{{ ansible_pkg_mgr }}/package.yml"
+  tags:
+  - bin
+
+- name: "Stop service"
+  service:
+    name:    "{{ item }}"
+    state:   stopped
+    enabled: no
+  with_items:
+  - "{{ conf.services }}"
+  tags:
+  - service
+
+- name: "Deploy '{{ ansible_pkg_mgr }}' based configuration"
+  template:
+    src:   "{{ ansible_pkg_mgr }}_{{ conf.conf_file }}.j2"
+    dest:  "{{ conf.conf_dir }}/{{ conf.conf_file }}"
+    owner: "{{ conf.username }}"
+    group: "{{ conf.groupname }}"
+    mode:  "u=rw,g=r,o=r"
+    force: yes
+  tags:
+  - conf
+
+- name: "Delete daemon additional configuration directory"
+  file:
+    dest:  "{{ item }}"
+    state: absent
+  with_items:
+  - "{{ conf.root_dir }}"
+  tags:
+  - clear
+
+- name: "Create daemon additional configuration directory"
+  file:
+    dest:  "{{ item }}"
+    state: directory
+    owner: "{{ conf.username }}"
+    group: "{{ conf.groupname }}"
+    mode:  "u=rw,g=r,o=r"
+  with_items:
+  - "{{ conf.root_dir }}"
+  tags:
+  - conf
+
+- name: "Final state for service - {{ service_final.state }}"
+  service:
+    name:    "{{ item }}"
+    state:   "{{ service_final.state }}"
+    enabled: "{{ service_final.enabled }}"
+  with_items:
+  - "{{ conf.services }}"
+  tags:
+  - service
+
+# TODO XXX remove this ugliness
+# Doesnt actually verify binding to the right host, 0.0.0.0 parsed as *
+# Ansible wait_for doesn't support UDP
+- name: "Wait for ports"
+  shell:
+    "lsof -nP -i :{{ item.port }} || sleep 5 && lsof -nP -i :{{ item.port }}"
+  with_items:
+  - host: "{{ bind_host | d('0.0.0.0') }}"
+    port: "{{ bind_port | d('69') }}"
+  loop_control:
+    label: "UDP {{ item.host }}:{{ item.port }}"
+  when:
+  - "service_final.state != 'stopped'"
+  tags:
+  - service
+  - verify
+

@@ -1,0 +1,99 @@
+#!/bin/bash
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#
+#    Nylox is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Nylox is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+set +x
+
+function cwu_pdate() {
+  export PDATE=$(date +%Y_%m_%d__%H_%M_%S__%s)
+  echo ${PDATE}
+}
+
+function cwu_mecho() {
+  echo "$(cwu_pdate) NYLOX: ${@}"
+}
+
+function cwu_evaluate_exit_code() {
+  if [ ${1} -gt 0 ]; then
+    cwu_mecho "${2} Failed "
+    exit 2
+  else
+    cwu_mecho "${2} OK "
+    echo "${3}"
+    exit ${1}
+  fi
+}
+
+function cwu_watch_socket() {
+    RESULT=$(lsof -nP -i ${CWU_WATCH_PROTOCOL}:${CWU_WATCH_SOCKET})
+    EXIT_CODE=$?
+    cwu_evaluate_exit_code ${EXIT_CODE} "watch socket '${CWU_WATCH_PROTOCOL}:${CWU_WATCH_SOCKET}' -" "${RESULT}"
+}
+
+function cwu_watch_process() {
+    RESULT=$(ps -ef | grep "${CWU_WATCH_PROCESS}" | grep -v "grep\|${0}")
+    EXIT_CODE=$?
+    cwu_evaluate_exit_code ${EXIT_CODE} "watch process '${CWU_WATCH_PROCESS}' -" "${RESULT}"
+}
+
+function cwu_trace_mode() {
+  while read line
+  do
+    if [ "x${CWU_TRACE_MODE}" == "xlog" ]; then
+      logger -t nylox "${line}"
+    elif [ "x${CWU_TRACE_MODE}" == "xjson" ]; then
+#    logger -t nylox "$(echo ${line} | python -m json.tool)"
+      echo "${line}" | /usr/bin/python -c 'import json; import sys; print(json.loads(sys.stdin.readline()))'
+    fi
+  done < "${2:-/dev/stdin}"
+
+  exit 0
+}
+
+function cwu_pyexec() {
+  echo "$(/usr/bin/python -c 'import sys; exec(sys.stdin.readline())')"
+}
+
+while getopts s:p:i:l: option
+do
+ case "${option}"
+ in
+ s) CWU_WATCH_SOCKET=${OPTARG};;
+ p) CWU_WATCH_PROCESS=${OPTARG};;
+ i) CWU_WATCH_PROTOCOL=${OPTARG};;
+ l) CWU_TRACE_MODE=${OPTARG};;
+ esac
+done
+
+if [ ! -z ${CWU_TRACE_MODE} ] ; then
+  cwu_trace_mode
+fi
+
+if [ -z ${CWU_WATCH_PROTOCOL} ] && [ -z ${CWU_WATCH_SOCKET} ] && [ -z ${CWU_WATCH_PROCESS} ]; then
+  cwu_mecho "USAGE ERROR: '${0} ${@}'"
+  exit 1
+fi
+
+if [ ! -z ${CWU_WATCH_SOCKET} ] ; then
+  cwu_watch_socket
+fi
+
+if [ ! -z ${CWU_WATCH_PROCESS} ] ; then
+  cwu_watch_process
+fi
+

@@ -1,0 +1,43 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#
+#    Nylox is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Nylox is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+---
+- name: "common :: Force update packages packages using '{{ ansible_pkg_mgr }}'"
+  environment:
+    http_proxy: "http://{{ nets[cnc_net].gateway }}:3142"
+    HTTP_PROXY: "http://{{ nets[cnc_net].gateway }}:3142"
+    https_proxy: "http://{{ nets[cnc_net].gateway }}:3142"
+    HTTPS_PROXY: "http://{{ nets[cnc_net].gateway }}:3142"
+  shell:
+    "{{ item }}"
+  with_items:
+  - "dpkg --configure -a || /bin/true"
+  - "apt-get -f install"
+  - "apt -o Debug::Acquire::http::Proxy=${http_proxy} -o Debug::Acquire::https::Proxy=${https_proxy} update -y"
+  when:
+  - apt_hotfix is defined
+  - apt_hotfix | bool
+
+- name: "common :: Install required packages using '{{ ansible_pkg_mgr }}'"
+  apt:
+    name: "{{ pkg_name }}"
+    state: latest
+  with_items:
+  - "{{ packages }}"
+  loop_control:
+    loop_var: "pkg_name"

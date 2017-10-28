@@ -1,0 +1,14 @@
+{% extends "file.j2" %}
+{% block content %}
+---
+galaxy_info:
+  author: "{{ authors[0].name }}"
+  description: "{{ authors[0].description }}"
+  company: "{{ authors[0].company }}"
+  license: license (GPLv3)
+  min_ansible_version: {{ min_ansible_version }}
+  galaxy_tags: []
+
+dependencies: []
+{% endblock %}
+

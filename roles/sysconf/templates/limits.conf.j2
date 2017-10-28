@@ -1,0 +1,73 @@
+# /etc/security/limits.conf
+#
+#Each line describes a limit for a user in the form:
+#
+#<domain>        <type>  <item>  <value>
+#
+#Where:
+#<domain> can be:
+#        - a user name
+#        - a group name, with @group syntax
+#        - the wildcard *, for default entry
+#        - the wildcard %, can be also used with %group syntax,
+#                 for maxlogin limit
+#        - NOTE: group and wildcard limits are not applied to root.
+#          To apply a limit to the root user, <domain> must be
+#          the literal username root.
+#
+#<type> can have the two values:
+#        - "soft" for enforcing the soft limits
+#        - "hard" for enforcing hard limits
+#
+#<item> can be one of the following:
+#        - core - limits the core file size (KB)
+#        - data - max data size (KB)
+#        - fsize - maximum filesize (KB)
+#        - memlock - max locked-in-memory address space (KB)
+#        - nofile - max number of open files
+#        - rss - max resident set size (KB)
+#        - stack - max stack size (KB)
+#        - cpu - max CPU time (MIN)
+#        - nproc - max number of processes
+#        - as - address space limit (KB)
+#        - maxlogins - max number of logins for this user
+#        - maxsyslogins - max number of logins on the system
+#        - priority - the priority to run user process with
+#        - locks - max number of file locks the user can hold
+#        - sigpending - max number of pending signals
+#        - msgqueue - max memory used by POSIX message queues (bytes)
+#        - nice - max nice priority allowed to raise to values: [-20, 19]
+#        - rtprio - max realtime priority
+#        - chroot - change root to directory (Debian-specific)
+#
+#<domain>      <type>  <item>         <value>
+#
+
+#*               soft    core            0
+#root            hard    core            100000
+#*               hard    rss             10000
+#@student        hard    nproc           20
+#@faculty        soft    nproc           20
+#@faculty        hard    nproc           50
+#ftp             hard    nproc           0
+#ftp             -       chroot          /ftp
+#@student        -       maxlogins       4
+
+{#- file params -#}
+{#- http://unix.stackexchange.com/questions/351487/openfiles-limit-automatically-decreases-when-passing-221-ubuntu-16-04 -#}
+{% set file_max = lookup('pipe','cat /proc/sys/fs/file-max')|int %}
+{% set nr_open = lookup('pipe','cat /proc/sys/fs/nr_open')|int %}
+{% set max_fd_avail = [file_max, nr_open] | min %}
+{% set max_fd = (max_fd_avail - 4096) %}
+
+{#- process params -#}
+{% set max_np = lookup('pipe','cat /proc/sys/kernel/pid_max')|int %}
+
+*	soft     nproc          {{ max_np }}
+*	hard     nproc          {{ max_np }}
+*	soft     nofile         {{ max_fd }}
+*	hard     nofile         {{ max_fd }}
+root	soft     nofile         {{ max_fd_avail }}
+root	hard     nofile         {{ max_fd_avail }}
+
+# End of file

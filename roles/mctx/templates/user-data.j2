@@ -1,0 +1,47 @@
+#cloud-config
+#
+#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#
+#    Nylox is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Nylox is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Auto user-data for node '{{ node }}'
+#
+chpasswd:
+  list: |
+    root:{{ default_password }}
+  expire: False
+
+users:
+  - default
+  - name: toor
+    gecos: Toor
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    groups: users, admin
+    ssh-import-id: None
+    lock_passwd: true
+    home: /home/toor
+    shell: /bin/bash
+    plain_text_passwd: '{{ default_password }}'
+    ssh-authorized-keys:
+      - {{ lookup('file', lookup('env','HOME') + '/.ssh/id_rsa.pub') }}
+
+{% if 'ubuntu-nodes' in hostvars[node].group_names %}
+packages:
+ - python-minimal
+ - rsync
+ - openssh-server
+{% endif %}
+
+package_update: true
+package_upgrade: true

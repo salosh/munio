@@ -1,0 +1,68 @@
+{
+  "order": 0,
+  "template": "telegraf-*",
+  "settings": {
+    "index": {
+      "mapping": {
+        "total_fields": {
+          "limit": "5000"
+        }
+      },
+      "refresh_interval": "10s"
+    }
+  },
+  "mappings": {
+    "_default_": {
+      "dynamic_templates": [
+        {
+          "tags": {
+            "path_match": "tag.*",
+            "mapping": {
+              "ignore_above": 512,
+              "type": "keyword"
+            },
+            "match_mapping_type": "string"
+          }
+        },
+        {
+          "metrics_long": {
+            "mapping": {
+              "index": true,
+              "type": "float"
+            },
+            "match_mapping_type": "long"
+          }
+        },
+        {
+          "metrics_double": {
+            "mapping": {
+              "index": true,
+              "type": "float"
+            },
+            "match_mapping_type": "double"
+          }
+        },
+        {
+          "text_fields": {
+            "mapping": {
+              "norms": false
+            },
+            "match": "*"
+          }
+        }
+      ],
+      "_all": {
+        "enabled": false
+      },
+      "properties": {
+        "@timestamp": {
+          "type": "date"
+        },
+        "measurement_name": {
+          "type": "keyword"
+        }
+      }
+    }
+  },
+  "aliases": {}
+}

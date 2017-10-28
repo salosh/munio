@@ -1,0 +1,21 @@
+---
+- name: "Unify interface names"
+  lineinfile:
+    path:   "/etc/default/grub"
+    regexp: 'GRUB_CMDLINE_LINUX=""'
+    line:   'GRUB_CMDLINE_LINUX="net.ifnames=0 biosdevname=0"'
+    owner:  "root"
+    group:  "root"
+    mode:   "u=rw,g=r,o=r"
+
+- name: "Apply GRUB settings"
+  shell:
+    update-grub
+  when:
+  - "ansible_pkg_mgr == 'apt'"
+
+- name: "Apply GRUB settings"
+  shell:
+    grub-mkconfig -o /boot/grub/grub.cfg
+  when:
+  - "ansible_pkg_mgr == 'pacman'"

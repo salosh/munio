@@ -1,0 +1,73 @@
+{% extends "file.j2" %}
+{% block content %}
+# auto-generated hosts file for site '{{ item_name }}'
+[hypervisor-nodes]
+localhost ansible_connection=local
+
+[ha-nodes]
+ha01 node_id=1
+ha02 node_id=2
+ha03 node_id=3
+
+[ha-nodes:vars]
+group_id=0
+
+[dns-nodes:children]
+ha-nodes
+
+[lb-nodes:children]
+dns-nodes
+
+[consul-nodes:children]
+ha-nodes
+
+[http-nodes:children]
+hypervisor-nodes
+ha-nodes
+
+[elasticsearch-nodes:children]
+#hypervisor-nodes
+ha-nodes
+
+[redis-nodes:children]
+#hypervisor-nodes
+ha-nodes
+
+[virtual-nodes:children]
+ha-nodes
+
+[arch-nodes]
+ha01
+ha02
+ha03
+[arch-nodes:vars]
+source_image=archlinux-nyloxcloud-1.0.3-x86_64.img
+flavor=s1.large
+
+[ubuntu-nodes]
+#ha01
+#ha02
+#ha03
+[ubuntu-nodes:vars]
+source_image=xenial-server-cloudimg-amd64-disk1.img
+flavor=s1.large
+#ansible_user="toor"
+
+[centos-nodes]
+#ha01
+#ha02
+#ha03
+[centos-nodes:vars]
+source_image=CentOS-7-x86_64-GenericCloud.qcow2
+flavor=s1.large
+#ansible_user="toor"
+
+[cirros-nodes]
+#ha01
+#ha02
+#ha03
+[centos-nodes:vars]
+source_image=cirros-0.3.5-x86_64-disk.img
+flavor=s1.large
+ansible_user="cirros"
+{% endblock %}

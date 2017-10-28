@@ -1,0 +1,44 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#
+#    Nylox is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Nylox is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+---
+conf:
+  services:
+  - consul
+  username: "consul"
+  groupname: "consul"
+  root_dir: "/etc/consul.d"
+  conf_file: config.json
+  conf_dir: /etc/consul
+
+consul_config_mode: client
+consul_log_level: INFO
+# <SSH> 0.9.3 is latest, but doesn't have webui
+consul_version: "0.9.0-rc1"
+
+consul_archive_url:    "https://releases.hashicorp.com/consul/{{ consul_version }}"
+consul_archive_binary: "{{ dir_reqs }}/consul_{{ consul_version }}_linux_amd64.zip"
+consul_archive_webui:  "{{ dir_reqs }}/consul_{{ consul_version }}_web_ui.zip"
+
+bind_host: "{{ ips[cnc_net][inventory_hostname].ip }}"
+#bind_port: ""
+
+service_final:
+  state: "restarted"
+  enabled: "yes"
+

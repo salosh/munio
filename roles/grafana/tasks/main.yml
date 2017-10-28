@@ -1,0 +1,130 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#
+#    Nylox is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Nylox is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+---
+- name: "Add user '{{ conf.username }}'"
+  user:
+    name:  "{{ conf.username }}"
+    state: present
+  tags:
+  - conf
+
+- name: "Extract archive"
+  unarchive:
+    src:  "{{ grafana_archive_binary }}"
+    dest: /opt
+    mode: "u=rwx,g=rx,o=rx"
+  run_once: true
+  delegate_to: localhost
+  tags:
+  - bin
+
+- name: "Deploy service file"
+  template:
+    src:   grafana_systemd.j2
+    dest:  /etc/systemd/system/grafana.service
+    owner: root
+    group: root
+    mode:  "u=rwx,g=rx,o=rx"
+  tags:
+  - service
+
+- name: "Stop service"
+  service:
+    name:    "{{ item }}"
+    state:   stopped
+    enabled: no
+  with_items:
+  - "{{ conf.services }}"
+  tags:
+  - service
+
+- name: "Delete previous lib dir"
+  file:
+    path:  "{{ item }}"
+    state: absent
+  with_fileglob:
+  - /var/lib/grafana/dashboards
+  - /var/lib/grafana
+  tags:
+  - clear
+
+- name: "Create lib dir"
+  file:
+    path:  "{{ item }}"
+    state: directory
+    owner: "{{ conf.username }}"
+    group: "{{ conf.groupname }}"
+  with_items:
+  - /var/lib/grafana
+  - /var/lib/grafana/dashboards
+  tags:
+  - conf
+
+- name: "Deploy configuration"
+  template:
+    src:   "{{ conf.conf_file }}.j2"
+    dest:  "{{ conf.conf_dir }}/{{ conf.conf_file }}"
+    owner: "{{ conf.username }}"
+    group: "{{ conf.groupname }}"
+    mode:  "u=rw,g=r,o=r"
+    force: yes
+  tags:
+  - conf
+
+- name: "Deploy default dashboards"
+  file:
+    src:   "{{ dir_reqs }}/{{ item }}"
+    dest:  "/var/lib/grafana/dashboards/{{ item }}"
+    owner: "{{ conf.username }}"
+    group: "{{ conf.groupname }}"
+    mode:  "u=rw,g=r,o=r"
+    force: yes
+  with_items:
+  - telastic.json
+  tags:
+  - conf
+
+- name: "Final state for service - {{ service_final.state }}"
+  service:
+    name:    "{{ item }}"
+    state:   "{{ service_final.state }}"
+    enabled: "{{ service_final.enabled }}"
+  with_items:
+  - "{{ conf.services }}"
+  tags:
+  - service
+
+- name: "Wait for ports - server ports"
+  wait_for:
+    host:    "{{ item.host }}"
+    port:    "{{ item.port }}"
+    state:   started
+    timeout: 5
+  with_items:
+  - host: "{{ cnc_ip }}"
+    port: "3000"
+  loop_control:
+    label: "{{ item.host }}:{{ item.port }}"
+  when:
+  - "service_final.state != 'stopped'"
+  - "consul_config_mode == 'server'"
+  tags:
+  - service
+  - verify
+

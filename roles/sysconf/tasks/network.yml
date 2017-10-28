@@ -1,0 +1,127 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#
+#    Nylox is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Nylox is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+---
+- name: "Delete previous network configuration"
+  shell:
+    "{{ item }}"
+  with_items:
+  - "rm -f /etc/systemd/network/*"
+  - "for iface in $(ls /sys/class/net/ | grep -v lo); do ip link set dev $iface down || echo 'Error' ; done;"
+  - "for iface in $(ls /sys/class/net/ | grep -v lo); do ip link del dev $iface      || echo 'Error' ; done;"
+  when:
+  - "inventory_hostname not in groups['virtual-nodes']"
+  - false
+  tags:
+  - clear
+
+- name: "Deploy network configuration"
+  vars:
+    iface:
+      name: "{{ item.ifnames[0] }}"
+      dhcp: "{{ 'dhcp' in item.tags }}"
+      net:  "{{ item.params.net | d('NA') }}"
+  template:
+    src:   "physical.network.j2"
+    dest:  "/etc/systemd/network/{{ item.ifnames[0] }}.network"
+    owner: root
+    group: root
+    mode:  "u=rw,g=r,o=r"
+    force: yes
+  with_items:
+  - "{{ allocations.byhost[inventory_hostname] }}"
+  tags:
+  - conf
+
+- name: "Update sysctl network related settings"
+  sysctl:
+    name:   "{{ item.key }}"
+    value:  "{{ item.value }}"
+    state:  present
+    reload: yes
+  with_items:
+    - { key: "net.ipv6.conf.all.disable_ipv6", value: 1 }
+    - { key: "net.ipv6.conf.default.disable_ipv6", value: 1 }
+    - { key: "net.ipv6.conf.lo.disable_ipv6", value: 1 }
+    - { key: "net.ipv4.tcp_keepalive_time", value: 7200 }
+    - { key: "net.ipv4.tcp_keepalive_intvl", value: 75 }
+    - { key: "net.ipv4.tcp_keepalive_probes", value: 9 }
+    - { key: "net.ipv4.tcp_retries2", value: 15 }
+  tags:
+  - conf 
+
+- name: "Deploy virtual network '{{ vnet }}' bridge"
+  include_tasks: "./vnet.yml"
+  loop_control:
+    loop_var: vnet
+  with_items:
+  - "{{ nets.keys() }}"
+  when:
+  - "'virtbridge' in nets[vnet].tags"
+  - "inventory_hostname not in groups['virtual-nodes']"
+  tags:
+  - conf
+
+- name: "Dump network configuration for later debugging"
+  copy:
+    content: "{{ networks | to_nice_yaml(indent=2) }}"
+    dest: /etc/systemd/network/networks.yml
+    mode: "u=rw,g=r,o=r"
+  tags:
+  - debug
+
+- name: "Final state for service - {{ service_final.state }}"
+  service:
+    name:    "{{ item }}"
+    state:   "{{ service_final.state }}"
+    enabled: "{{ service_final.enabled }}"
+  with_items:
+  - "systemd-networkd"
+  tags:
+  - service
+
+#TODO XXX
+- name: "Wait for ports"
+  wait_for:
+    host:    "{{ item.host }}"
+    port:    "{{ item.port }}"
+    state:   started
+    timeout: 5
+  with_items:
+  - host: "{{ bind_host | d('127.0.0.1') }}"
+    port: "{{ bind_port | d('') }}"
+  loop_control:
+    label: "{{ item.host }}:{{ item.port }}"
+  when:
+  - "service_final.state != 'stopped'"
+  - "not_impleneted_yet is defined"
+
+# TODO XXX
+- name: "Disable service"
+  service:
+    name: networking
+    state: stopped
+    enabled: no
+  with_items:
+  - networking
+  - NetworkManager
+  failed_when: false
+  when:
+  - "not_impleneted_yet is defined"
+  tags:
+  - service

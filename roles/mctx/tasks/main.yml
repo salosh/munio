@@ -1,0 +1,117 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#
+#    Nylox is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Nylox is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+---
+- name: "Delete meta-context http directory"
+  file:
+    dest:  "{{ item }}"
+    state: absent
+    owner: "{{ conf.username }}"
+    group: "{{ conf.username }}"
+    mode:  "u=rwx,g=rx,o=rx"
+  with_items:
+  - "{{ conf.root_dir }}"
+  tags:
+  - clear
+
+- name: "Create meta-context http inventory directories"
+  file:
+    dest:  "{{ item }}"
+    state: directory
+    owner: "{{ conf.username }}"
+    group: "{{ conf.username }}"
+    mode:  "u=rwx,g=rx,o=rx"
+  with_items:
+  - "{{ conf.root_dir }}/"
+  - "{{ conf.root_dir }}/nodes"
+  - "{{ conf.root_dir }}/nodes/by-name"
+  - "{{ conf.root_dir }}/nodes/by-group"
+  - "{{ conf.root_dir }}/nodes/by-mac"
+  - "{{ conf.root_dir }}/nodes/by-serial"
+  - "{{ conf.root_dir }}/static"
+  - "{{ conf.root_dir }}/static/images"
+  - "{{ conf.root_dir }}/dynamic"
+  - "{{ conf.root_dir }}/dynamic/cidata"
+  - "{{ conf.root_dir }}/dynamic/scripts"
+  - "{{ conf.root_dir }}/dynamic/pxe"
+  tags:
+  - conf
+
+- name: "Deploy meta-context http README"
+  copy:
+    content: "<h4> Directory under maintenance '{{ ansible_date_time.iso8601_micro }}' </h4>"
+    dest:    "{{ conf.root_dir }}/nodes/README.html"
+    owner:   "{{ conf.username }}"
+    group:   "{{ conf.username }}"
+    mode:    "u=rwx,g=rx,o=rx"
+    force:   yes
+  tags:
+  - xtraz
+
+- name: "Deploy meta-context scripts"
+  template:
+    src:   "{{ item }}.j2"
+    dest:  "{{ conf.root_dir }}/dynamic/scripts/{{ item }}"
+    owner: "{{ conf.username }}"
+    group: "{{ conf.username }}"
+    mode:  "u=rwx,g=rx,o=rx"
+    force: yes
+  with_items:
+  - bootstrap.sh
+  tags:
+  - conf
+
+- name: "Create http meta-context per node"
+  include_tasks: "./per_node_http.yml"
+  loop_control:
+    loop_var: "node"
+  with_inventory_hostnames:
+  - all
+  tags:
+  - conf
+
+- name: "Deploy meta-context http README"
+  copy:
+    content: "<h4> Nodes updated at '{{ ansible_date_time.iso8601_micro }}' </h4>"
+    dest:    "{{ conf.root_dir }}/nodes/README.html"
+    owner:   "{{ conf.username }}"
+    group:   "{{ conf.username }}"
+    mode:    "u=rwx,g=rx,o=rx"
+    force:   yes
+  tags:
+  - xtraz
+
+- name: "Create http checksum for server content"
+  include_tasks: "./checksum.yml"
+  with_filetree:
+  - "{{ conf.root_dir }}/static"
+  - "{{ conf.root_dir }}/dynamic"
+  loop_control:
+    loop_var: "diritem"
+    label: "{{ diritem['root'] }}/{{ diritem['path'] }}"
+  tags:
+  - xtraz
+
+- name: "Restart service"
+  service:
+    name: "{{ mctx_http_svc }}"
+    state: restarted
+    enabled: yes
+  tags:
+  - service
+  when: false

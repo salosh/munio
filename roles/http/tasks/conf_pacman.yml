@@ -1,0 +1,13 @@
+---
+- name: "Deploy '{{ ansible_pkg_mgr }}' based configuration"
+  template:
+    src:   "{{ ansible_pkg_mgr }}/{{ item.name }}.j2"
+    dest:  "{{ item.path }}/{{ item.name }}"
+    owner: "{{ conf.username }}"
+    group: "{{ conf.groupname }}"
+    mode:  "u=rw,g=r,o=r"
+    force: yes
+  with_items:
+  - "{{ conf.files }}"
+  tags:
+  - conf

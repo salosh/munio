@@ -1,0 +1,54 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#
+#    Nylox is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Nylox is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+---
+- name: "Deploy package manager configuration"
+  include_tasks: "{{ role_path }}/../common/tasks/{{ ansible_pkg_mgr }}/conf.yml"
+  tags:
+  - bin
+
+- name: "Deploy repositories"
+  include_tasks: "{{ role_path }}/../common/tasks/{{ ansible_pkg_mgr }}/repos.yml"
+  tags:
+  - bin
+
+- name: "Upgrade system"
+  include_tasks: "{{ role_path }}/../common/tasks/{{ ansible_pkg_mgr }}/upgrade.yml"
+  tags:
+  - bin
+
+- name: "Install packages"
+  vars:
+    packages: "{{ pkg_group[item] }}"
+  include_tasks: "{{ role_path }}/../common/tasks/{{ ansible_pkg_mgr }}/package.yml"
+  with_items:
+  - boot
+  - filesystem
+  - net
+  - tools
+  - monitor
+  - python
+  - devops
+#  - ui
+#  - virt
+  loop_control:
+    label: "{{ pkg_group[item] | list | sort | unique | join(',') }}"
+  when:
+  - "item in pkg_group.keys()"
+  tags:
+  - bin

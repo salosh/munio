@@ -1,0 +1,15 @@
+[Match]
+Name=br-{{ vnet }}
+
+[Network]
+DNS=8.8.8.8
+DNS=8.8.4.4
+{% if 'dhcp_external' in nets[vnet].tags %}
+DHCP=ipv4
+
+[DHCPv4]
+UseHostname=false
+{% elif 'internal' in nets[vnet].tags %}
+Address={{ nets[vnet]['gateway'] }}/{{ nets[vnet]['prefix'] }}
+{% endif %}
+

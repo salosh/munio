@@ -1,0 +1,29 @@
+{{ item_name }}
+=========
+
+Role '{{ item_name }}' description
+
+Requirements
+------------
+
+Role Variables
+--------------
+
+Dependencies
+------------
+
+Example Playbook
+----------------
+
+License
+-------
+
+GPLv3
+
+Author Information
+------------------
+
+{% for author in authors %}
+- {{ author.name }} <{{ author.email }}>
+{% endfor %}
+

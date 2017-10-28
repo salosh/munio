@@ -1,0 +1,13 @@
+[Match]
+Name=dmy-{{ vnet }}
+
+[Network]
+DNS=8.8.8.8
+DNS=8.8.4.4
+#DHCP=ipv4
+Address=127.127.127.127/32
+Bridge=br-{{ vnet }}
+
+[DHCPv4]
+UseHostname=false
+

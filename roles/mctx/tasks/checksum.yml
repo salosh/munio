@@ -1,0 +1,40 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#
+#    Nylox is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Nylox is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+---
+- name: "{{ node }} :: create checksum for file {{ diritem['path'] }}"
+  stat:
+    path: "{{ diritem['root'] }}/{{ diritem['path'] }}"
+  when:
+  - "diritem['state'] == 'file'"
+  register: stat_mctx_files
+
+- name: "{{ node }} :: Add checksums to file {{ diritem['path'] }}"
+  lineinfile:
+    path:   "{{ conf.root_dir }}/checksums.txt"
+    regexp: "^{{ item.stat.md5 }}"
+    line:   "{{ item.stat.md5 }},{{ item.stat.checksum }},{{ item.stat.mtime }},{{ item.stat.path | replace(conf.root_dir, '') }}"
+    state:  present
+    create: yes
+  with_items:
+  - "{{ stat_mctx_files }}"
+  loop_control:
+    label: "{{ diritem['root'] }}/{{ diritem['path'] }} ({{ diritem['state'] }})"
+  when:
+  - "'stat' in item.keys()"
+

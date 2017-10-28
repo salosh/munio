@@ -1,0 +1,159 @@
+# TODO desc, prefix, sort
+
+allocations: |
+  {% set allocs = {'bynet':{}, 'byhost':{}, 'byiface':{} }                                %}
+  {% for host in groups['all'] | sort                                                     %}
+  {%   set allocz = hostvars[host].iface_allocations | default(iface_allocations)         %}
+  {%   for alloc in allocz.split(';')                                                     %}
+  {%     set entry = {'ifnames': [], 'params': {}}                                        %}
+  {%     for param in alloc.split(':')                                                    %}
+  {%       set key = param.split('=')[0].lower()                                          %}
+  {%       set value = param.split('=')[1] | default('')                                  %}
+  {%       set tmp = entry.params.update({key: value })                                   %}
+  {%       if key == 'ifn'                                                                %}
+  {%         for iface in value.split(',') | sort | unique                                %}
+  {%           set tmp = entry.ifnames.append(value)                                      %}
+  {%         endfor                                                                       %}
+  {%       elif key == 'ifi'                                                              %}
+  {%         for iface in value.split(',') | sort | unique                                %}
+  {%           set tmp = entry.ifnames.append('eth' ~ iface)                              %}
+  {%         endfor                                                                       %}
+  {%       endif                                                                          %}
+  {%     endfor                                                                           %}
+  {%     if 'tags' in entry.params.keys()                                                 %}
+  {%       set tmp = entry.update({'tags': entry.params.tags.split(',') | sort |unique }) %}
+  {%     else                                                                             %}
+  {%       set tmp = entry.update({'tags': [] })                                          %}
+  {%     endif                                                                            %}
+  {# ------------------------------------------------------------------------------------ #}
+  {%     if 'net' in entry.params.keys()                                                  %}
+  {%       if entry.params.net not in allocs.bynet.keys()                                 %}
+  {%         set tmp = allocs.bynet.update({entry.params.net: {}})                        %}
+  {%       endif                                                                          %}
+  {%       set tmp = allocs.bynet[entry.params.net].update({host: entry})                 %}
+  {%     endif                                                                            %}
+  {%     if host not in allocs.byhost.keys()                                              %}
+  {%       set tmp = allocs.byhost.update({host: []})                                     %}
+  {%     endif                                                                            %}
+  {%     set tmp = allocs.byhost[host].append(entry)                                      %}
+  {%     for iface in entry.ifnames | sort                                                %}
+  {%       if iface not in allocs.byiface.keys()                                          %}
+  {%         set tmp = allocs.byiface.update({iface: {}})                                 %}
+  {%       endif                                                                          %}
+  {%       set tmp = allocs.byiface[iface].update({host: entry})                          %}
+  {%     endfor                                                                           %}
+  {%   endfor                                                                             %}
+  {% endfor                                                                               %}
+  {% set allocations = {'allocs': allocs}                                                 %}
+  {{ (allocs) }}
+
+nets: |
+  {% set netz = {}                                                                        %}
+  {% for key in networks.keys() | sort                                                    %}
+  {%   set net_idx = '%02d' % (loop.index - 1)                                            %}
+  {%   set net_tags = networks[key]['tags'] | d('')                                       %}
+  {%   set net_kvtags = networks[key]['kvtags'] | d({})                                   %}
+  {%   set cidr = networks[key].cidr                                                      %}
+  {%   set tmp = netz.update({key: {} })                                                  %}
+  {%   set gateway = networks[key].gateway | d( cidr | ipaddr('-2') | ipaddr('address') ) %}
+  {%   set hostmin = networks[key].hostmin | d( cidr | ipaddr('1')  | ipaddr('address') ) %}
+  {%   set hostmax = networks[key].hostmax | d( cidr | ipaddr('-3') | ipaddr('address') ) %}
+  {%   set tmp = netz[key].update({'tags':      net_tags.split(',') })                    %}
+  {%   set tmp = netz[key].update({'cidr':      cidr })                                   %}
+  {%   set tmp = netz[key].update({'gateway':   gateway })                                %}
+  {%   set tmp = netz[key].update({'hostmin':   hostmin })                                %}
+  {%   set tmp = netz[key].update({'hostmax':   hostmax })                                %}
+  {%   set tmp = netz[key].update({'prefix':    cidr | ipaddr('prefix') })                %}
+  {%   set tmp = netz[key].update({'netmask':   cidr | ipaddr('netmask') })               %}
+  {%   set tmp = netz[key].update({'network':   cidr | ipaddr('network') })               %}
+  {%   set tmp = netz[key].update({'broadcast': cidr | ipaddr('broadcast') })             %}
+  {%   set tmp = netz[key].update({'seg':       networks[key].seg | d('0000') })          %}
+  {%   set tmp = netz[key].update({'idx': net_idx })                                      %}
+  {% endfor                                                                               %}
+  {% set nets = {'nets': netz}                                                            %}
+  {{ (netz) }}
+
+ips: |
+  {% set ipz = {}                                                                         %}
+  {% set cols_detection = []                                                              %}
+  {% set cols_detected = []                                                               %}
+  {% for key in nets.keys() | sort                                                        %}
+  {%   set net_tags = nets[key].tags | default([])                                        %}
+  {%   if not 'assign' in net_tags %}{% continue %}{% endif                               %}
+  {%   set cidr = nets[key].cidr                                                          %}
+  {%   set tmp = ipz.update({key: {} })                                                   %}
+  {%   set tmp = ipz[key].update({'macs':  {} })                                          %}
+  {%   set tmp = ipz[key].update({'vmacs': {} })                                          %}
+  {%   for host in groups['all']                                                          %}
+  {%     set hvars = hostvars[host]                                                       %}
+  {%     set node_id  = '%02d' % (hvars['node_id']  | d(0)) | int                         %}
+  {%     set group_id = '%02d' % (hvars['group_id'] | d(0)) | int                         %}
+  {%     set rack_id =  '%02d' % (hvars['rack_id']  | d(0)) | int                         %}
+  {%     set offset = { 'groupid': [0], 'nodeid': [0], 'rackid': [0]}                     %}
+  {%     set pfx = 'ofst_'                                                                %}
+  {%     for ofst_key in offset.keys() | sort                                             %}
+  {# ------------------------------------------------------------------------------------ #}
+  {%       if (pfx ~ ofst_key) in networks[key].keys()                                    %}
+  {%         set tmp = offset[ofst_key].append(networks[key][pfx ~ ofst_key])             %}
+  {%       endif                                                                          %}
+  {# ------------------------------------------------------------------------------------ #}
+  {# ------------------------------------------------------------------------------------ #}
+  {%       if (pfx ~ ofst_key) in hvars                                                   %}
+  {%         set tmp = offset[ofst_key].append(hvars[pfx ~ ofst_key])                     %}
+  {%       endif                                                                          %}
+  {# ------------------------------------------------------------------------------------ #}
+  {%     endfor                                                                           %}
+  {%     set by_groupid = (offset.groupid[-1] | int) * group_id | int                     %}
+  {%     set by_nodeid = (offset.nodeid[-1] | int) * node_id | int                        %}
+  {%     set by_rackid = (offset.rackid[-1] | int) * rack_id | int                        %}
+  {%     set ofst_hostmin = nets[key].hostmin | ipaddr('int')                             %}
+  {%     set ofst_netmin = cidr | ipaddr('1') | ipaddr('address') | ipaddr('int')         %}
+  {%     if ofst_hostmin != ofst_netmin                                                   %}
+  {%       set ofst_min = ofst_hostmin - ofst_netmin                                      %}
+  {%     else                                                                             %}
+  {%       set ofst_min = 0                                                               %}
+  {%     endif                                                                            %}
+  {%     set ofst = hvars['ofst'] | d(ofst_min + by_groupid + by_nodeid + by_rackid)      %}
+  {%     set ip = hvars['ip_' + key] | d(cidr | ipaddr(ofst) | ipaddr('address'))         %}
+  {%     set ip_verified = ip | ipaddr(cidr) | ipaddr('address')                          %}
+  {%     if ip not in cols_detection                                                      %}
+  {%       set tmp = cols_detection.append(ip)                                            %}
+  {%     else                                                                             %}
+  {%       set tmp = cols_detected.append(host ~' - '~ ip)                                %}
+  {%       set tmp = ipz[key].update({'collisions': cols_detected | sort| list |unique }) %}
+  {%     endif                                                                            %}
+  {%     set host_entry = {}                                                              %}
+  {%     set tmp = host_entry.update({'ip': ip_verified })                                %}
+  {%     set tmp = host_entry.update({'cidr': cidr })                                     %}
+  {%     set mac = ['52', '54', '00']                                                     %}
+  {%     set tmp = mac.append( '%02x' % (nets[key].idx)  | int )                          %}
+  {%     set tmp = mac.append( '%02x' % (group_id) | int )                                %}
+  {%     set tmp = mac.append( '%02x' % (node_id)  | int )                                %}
+  {%     set vmac = mac | join(':')                                                       %}
+  {%     set tmp = host_entry.update({'vmac': vmac })                                     %}
+  {%     set tmp = ipz[key].vmacs.update(  {vmac: host })                                 %}
+  {%     if 'mac' in hvars                                                                %}
+  {%     set tmp = host_entry.update({'mac': hvars.mac })                                     %}
+  {%     set tmp = ipz[key].macs.update(  {hvars.mac: host })                                 %}
+  {%     endif                                                                            %}
+  {%     if trace_mode is defined and trace_mode | bool                                   %}
+  {%       set tmp = host_entry.update({'ofst_min': ofst_min })                           %}
+  {%       set tmp = host_entry.update({'group_id': group_id })                           %}
+  {%       set tmp = host_entry.update({'node_id': node_id })                             %}
+  {%       set tmp = host_entry.update({'rack_id': rack_id })                             %}
+  {%       set tmp = host_entry.update({'ofst': ofst })                                   %}
+  {%       set tmp = host_entry.update({'offset': offset })                               %}
+  {%     endif                                                                            %}
+  {%     set tmp = ipz[key].update({host: host_entry })                                   %}
+  {%     set tmp = hostvars[host].update({'ips': ipz})                                    %}
+  {%   endfor                                                                             %}
+  {% endfor                                                                               %}
+  {{ (ipz) }}
+
+cnc_ip: "{{ ips[cnc_net][inventory_hostname].ip }}"
+
+proxy:
+  enabled: true
+  protocol: "http"
+  host: "{{ nets[cnc_net].gateway }}"
+  port: 3142

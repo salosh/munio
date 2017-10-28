@@ -1,0 +1,85 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#
+#    Nylox is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Nylox is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+---
+- name: "Add repositories"
+  vars:
+    repos: "{{ conf.repos }}"
+  include_tasks: "{{ role_path }}/../common/tasks/{{ ansible_pkg_mgr }}/repo.yml"
+  tags:
+  - repo
+  - bin
+
+- name: "Install packages"
+  vars:
+    packages: "{{ conf.packages }}"
+  include_tasks: "{{ role_path }}/../common/tasks/{{ ansible_pkg_mgr }}/package.yml"
+  tags:
+  - bin
+
+- name: "Stop service"
+  service:
+    name:    "{{ item }}"
+    state:   stopped
+    enabled: no
+  with_items:
+  - "{{ conf.services }}"
+  tags:
+  - service
+
+- name: "Deploy '{{ ansible_pkg_mgr }}' based configuration"
+  include_tasks: "./conf_{{ ansible_pkg_mgr }}.yml"
+
+- name: "Deploy advanced memory settings"
+  sysctl: name={{ item.key }} value={{ item.value }}
+  with_items:
+  - { key: "vm.max_map_count", value: 262144 }
+  tags:
+  - conf
+
+- name: "Final state for service - {{ service_final.state }}"
+  service:
+    name:    "{{ item }}"
+    state:   "{{ service_final.state }}"
+    enabled: "{{ service_final.enabled }}"
+  with_items:
+  - "{{ conf.services }}"
+  tags:
+  - service
+
+- name: "Wait for ports"
+  wait_for:
+    host:    "{{ item.host }}"
+    port:    "{{ item.port }}"
+    state:   started
+    timeout: 30
+  with_items:
+  - host: "{{ bind_host | d('127.0.0.1') }}"
+    port: "{{ bind_port | d('9200') }}"
+  loop_control:
+    label: "{{ item.host }}:{{ item.port }}"
+  when:
+  - "service_final.state != 'stopped'"
+  tags:
+  - service
+  - verify
+
+
+# Debug total number of items
+# curl -XGET 'http://elasticsearch.service.lb:9200/telegraf-*/metrics/_search?size=0' -H "Content-Type: application/json" | python -m json.tool
+# curl -XDELETE 'http://elasticsearch.service.lb:9200/telegraf-*'

@@ -1,0 +1,82 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#
+#    Nylox is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Nylox is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+---
+- name: "Deploy profile customizations"
+  template:
+    src: "{{ item }}.j2"
+    dest: "/root/.{{ item }}"
+    owner: root
+    group: root
+    mode: "u=rwx,g=rx,o="
+    force: yes
+  with_items:
+  - bash_aliases
+  - vimrc
+  - nanorc
+  tags:
+  - xtraz
+
+- name: "Add aliases sourcing to bashrc"
+  lineinfile:
+    path: "/etc/bash.bashrc"
+    line: '. ~/.bash_aliases'
+  tags:
+  - xtraz
+
+- name: "Update local motd file"
+  template:
+    src: "{{ item }}.j2"
+    dest: "/etc/profile.d/motd.sh"
+    owner: root
+    group: root
+    mode: "u=rw,g=r,o=r"
+  with_items:
+  - motd
+  tags:
+  - xtraz
+
+- name: "Deploy default locale"
+  copy:
+    content: "LC_ALL={{ default_locale }}"
+    dest: /etc/default/locale
+  tags:
+  - conf
+
+- name: "Set locale"
+  shell:
+    "{{ item }}"
+  with_items:
+  - "locale-gen"
+  - "localectl set-locale LANG={{ default_locale }}"
+  tags:
+  - conf 
+
+- name: "Deploy system FD calculated limits"
+  template:
+    src:   "{{ item }}.j2"
+    dest:  "/etc/security/{{ item }}"
+    owner: root
+    group: root
+    mode:  "u=rw,g=r,o=r"
+    force: yes
+  with_items:
+  - limits.conf
+  tags:
+  - conf 
+

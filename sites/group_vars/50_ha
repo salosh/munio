@@ -1,0 +1,47 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#
+#    Nylox is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Nylox is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Common variables file        
+# Services and High-Availability settings
+#
+# TODO XXX change to script, inventory_hostname wont resolve correctly on secondaries
+lb_services:
+  vip:
+    hostname: "vip.service.lb"
+    apply_to: "consul-nodes"
+    watch_script: "consul operator raft list-peers | grep {{ inventory_hostname }} | grep leader || exit 2"
+  dns:
+    hostname: "dns.service.lb"
+    bind_port: 53
+    bind_protocol: "udp"
+    apply_to: "dns-nodes"
+  http:
+    hostname: "http.service.lb"
+    bind_port: 80
+    apply_to: "http-nodes"
+    dns_ttl: "30s"
+  elasticsearch:
+    hostname: "elasticsearch.service.lb"
+    bind_port: 9200
+    apply_to: "elasticsearch-nodes"
+    dns_ttl: "60s"
+  redis:
+    hostname: "redis.service.lb"
+    bind_port: 6379
+    apply_to: "redis-nodes"
+
+lb_keys: []

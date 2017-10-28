@@ -1,0 +1,62 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#
+#    Nylox is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Nylox is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+---
+
+pacman:
+  packages:
+  - apache
+  services:
+  - httpd
+  username:  "http"
+  groupname: "http"
+  files:
+  - name: "httpd.conf"
+    path: "/etc/httpd/conf"
+  root_dir:  "/srv/http"
+
+apt:
+  packages:
+  - apache2
+  services:
+  - apache2
+  username:  "root"
+  groupname: "root"
+  files:
+  - name: "apache2.conf"
+    path: "/etc/apache2"
+  - name: "ports.conf"
+    path: "/etc/apache2"
+  - name: "000-default.conf"
+    path: "/etc/apache2/sites-available"
+  root_dir:  "/srv/http"
+
+yum:
+  packages:
+  - apache
+  services:
+  - httpd
+
+conf: "{{ vars[ansible_pkg_mgr] }}"
+
+bind_host: "{{ ips[cnc_net][inventory_hostname].ip }}"
+bind_port: "80"
+
+service_final:
+  state: "restarted"
+  enabled: "yes"

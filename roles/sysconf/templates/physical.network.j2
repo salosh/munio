@@ -1,0 +1,14 @@
+[Match]
+Name={{ iface.name }}
+
+[Network]
+{% if iface.dhcp %}
+DHCP=ipv4
+
+[DHCPv4]
+UseHostname=false
+{% else %}
+Address={{ ips[iface.net][inventory_hostname].ip }}/{{ nets[iface.net].prefix }}
+Gateway={{ nets[iface.net].gateway }}
+#DNS=8.8.8.8
+{% endif %}

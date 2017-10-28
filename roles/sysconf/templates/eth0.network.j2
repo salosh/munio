@@ -1,0 +1,12 @@
+[Match]
+Name=eth0
+
+[Network]
+Address={{ ips[cnc_net][inventory_hostname].ip }}/{{ nets[cnc_net].prefix }}
+Gateway={{ nets[cnc_net].gateway }}
+#DNS=8.8.8.8
+#DNS=8.8.4.4
+#DHCP=ipv4
+
+[DHCPv4]
+UseHostname=false

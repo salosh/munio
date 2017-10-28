@@ -1,0 +1,55 @@
+options {
+	directory "/var/cache/bind";
+
+	// If there is a firewall between you and nameservers you want
+	// to talk to, you may need to fix the firewall to allow multiple
+	// ports to talk.  See http://www.kb.cert.org/vuls/id/800113
+
+	// If your ISP provided one or more IP addresses for stable 
+	// nameservers, you probably want to use them as forwarders.  
+	// Uncomment the following block, and insert the addresses replacing 
+	// the all-0's placeholder.
+
+        //query-source address * port 53;
+        query-source address * port *;
+        transfer-source *;
+        notify yes;
+        notify-source *;
+
+{% if external_dns is defined and external_dns | length > 0 %}
+	forwarders {
+{%   for dns in external_dns %}
+            {{ dns }};
+{%   endfor %}
+	};
+{% endif %}
+	//========================================================================
+	// If BIND logs error messages about the root key being expired,
+	// you will need to update your keys.  See https://www.isc.org/bind-keys
+	//========================================================================
+        //dnssec-enable yes;
+        //dnssec-validation yes;
+
+	auth-nxdomain no;    # conform to RFC1035
+
+        recursion yes;
+        zone-statistics yes;
+
+        listen-on { {{ bind_host }}; };
+	listen-on-v6 { any; };
+};
+
+logging {
+        channel simple_log {
+                file "/var/lib/bind/bind.log"
+                versions 3 size 5M;
+                severity warning;
+                print-time yes;
+                print-severity yes;
+                print-category yes;
+        };
+        category default {
+                simple_log;
+        };
+};
+

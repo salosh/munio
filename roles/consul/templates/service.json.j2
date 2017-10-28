@@ -1,0 +1,56 @@
+{# Author: Salo Shp <saloshp@gmail.com>                                      #}
+{#                                                                           #}
+{#    This file is part of Nylox. <https://github.com/nylox/nylox.git> #}
+{#                                                                           #}
+{#    Nylox is free software: you can redistribute it and/or modify        #}
+{#    it under the terms of the GNU General Public License as published by   #}
+{#    the Free Software Foundation, either version 3 of the License, or      #}
+{#    (at your option) any later version.                                    #}
+{#                                                                           #}
+{#    Nylox is distributed in the hope that it will be useful,             #}
+{#    but WITHOUT ANY WARRANTY; without even the implied warranty of         #}
+{#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the          #}
+{#    GNU General Public License for more details.                           #}
+{#                                                                           #}
+{#    You should have received a copy of the GNU General Public License      #}
+{#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.       #}
+{#                                                                           #}
+{% set svc = lb_services[iteritem] | default({}) %}
+{
+  "service": {
+    "name" : "{{ iteritem.replace('_','') }}",
+{% set tagz = [] %}
+{% set tmp = tagz.append('"' ~ site_name ~ '"') %}
+{% set tmp = tagz.append('"' ~ rack_name ~ '"') %}
+{% set tmp = tagz.append('"' ~ inventory_hostname ~ '"') %}
+{% if 'tags' in svc.keys() %}
+{%   for tag in svc.tags | list | sort %}
+{%     set tmp = tagz.append('"' ~ tag ~ '"') %}
+{%   endfor %}
+{% endif %}
+    "tags": [{{ tagz | unique | join(',') }}],
+{% if 'bind_net' in svc.keys() %}
+    "address": "{{ ips[svc.bind_net][inventory_hostname].ip }}",
+{% elif 'bind_host' in svc.keys() %}
+    "address": "{{ svc.bind_host }}",
+{% endif %}
+{% if 'bind_port' in svc.keys() %}
+    "port": {{ svc.bind_port }},
+{% endif %}
+    "enableTagOverride": false,
+    "checks": [
+      {
+        "id": "cwu-{{ iteritem }}",
+        "name": "Service '{{ iteritem }}' health-check",
+{% if 'watch_script' in svc.keys() %}
+        "script": "{{ svc.watch_script }}",
+{% elif 'bind_process' in svc.keys() %}
+        "script": "/usr/bin/cwu -p {{ svc.bind_process }}",
+{% elif 'bind_port' in svc.keys() %}
+        "script": "/usr/bin/cwu -s {{ svc.bind_port }} {% if 'bind_protocol' in svc.keys() %}-i {{ svc.bind_protocol }}{% endif %}",
+{% endif %}
+        "interval": "{{ svc.interval | default('30s') }}"
+      }
+    ]
+  }
+}

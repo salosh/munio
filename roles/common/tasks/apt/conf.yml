@@ -1,0 +1,44 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#
+#    Nylox is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Nylox is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+---
+- name: "Deploy proxy configuration"
+  copy:
+    content: "{{ item.content }}"
+    dest:    "/etc/apt/apt.conf.d/{{ item.name }}"
+  with_items:
+  - name:    "05-http-proxy"
+    content: "Acquire::http::Proxy \"{{ proxy.protocol }}://{{ proxy.host }}:{{ proxy.port }}\";"
+  - name:    "05-https-proxy"
+    content: "Acquire::https::Proxy \"{{ proxy.protocol }}://{{ proxy.host }}:{{ proxy.port }}\";"
+  when:
+  - proxy is defined
+  - proxy.enabled | bool
+  tags:
+  - conf
+
+- name: "Deploy compression type configuration"
+  copy:
+    content: "{{ item.content }}"
+    dest:    "/etc/apt/apt.conf.d/{{ item.name }}"
+  with_items:
+  - name:    "05-compression-order"
+    content: "Acquire::CompressionTypes::Order:: \"gz\";"
+  tags:
+  - conf
+

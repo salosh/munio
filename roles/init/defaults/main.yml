@@ -1,0 +1,11 @@
+---
+allowed_init_actions: ['site', 'role', 'verify']
+
+min_ansible_version: "2.4.0.0"
+
+authors:
+  - name: "Salo Shp"
+    description: ""
+    company: ""
+    email: "saloshp@gmail.com"
+
