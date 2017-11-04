@@ -35,3 +35,15 @@
     consul_config_mode: server
   roles:
    - consul
+
+- hosts: consul-nodes[0]
+  gather_facts: no
+#  no_log: True
+  vars:
+    is_primary: true
+    bootstrap_expect: 1
+    consul_config_mode: server
+  tasks:
+  - include_tasks: "../roles/consul/tasks/xtraz.yml"
+
+

@@ -32,8 +32,11 @@ apt:
   - bind9
 
 yum:
-  packages:  []
-  services:  []
+  packages:
+  - bind
+  - bind-utils
+  services:
+  - named
 
 conf: "{{ vars[ansible_pkg_mgr] | default({}) }}"
 bind_host: "{{ ips[cnc_net][inventory_hostname].ip }}"

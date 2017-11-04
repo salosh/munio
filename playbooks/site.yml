@@ -17,6 +17,15 @@
 #
 
 ---
+- hosts: localhost
+#  gather_facts: no
+#  no_log: True
+  roles:
+  - { role: sysconf }
+  - { role: http, bind_host: "{{ nets[cnc_net].gateway }}" }
+  - { role: mctx }
+  - { role: dhcp }
+
 - import_playbook: "./virt.yml"
 - import_playbook: "./sshauth.yml"
 
@@ -25,11 +34,10 @@
 #  no_log: True
   roles:
   - { role: sysconf }
-
+  - { role: http }
 
 - import_playbook: "./dns.yml"
 - import_playbook: "./consul.yml"
 - import_playbook: "./elasticsearch.yml"
 - import_playbook: "./telegraf.yml"
-- import_playbook: "./http.yml"
 

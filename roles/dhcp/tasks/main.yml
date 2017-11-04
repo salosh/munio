@@ -36,7 +36,7 @@
 
 - name: "Deploy '{{ ansible_pkg_mgr }}' based configuration"
   template:
-    src:   "{{ ansible_pkg_mgr }}_{{ conf.conf_file }}.j2"
+    src:   "{{ ansible_pkg_mgr }}/{{ conf.conf_file }}.j2"
     dest:  "{{ conf.conf_dir }}/{{ conf.conf_file }}"
     owner: "{{ conf.username }}"
     group: "{{ conf.groupname }}"

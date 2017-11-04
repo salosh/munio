@@ -23,8 +23,10 @@
       {%- set prefix = conf.root_dir ~'/nodes' -%}
       {%- set subdirz = { 'dirz': [], 'linkz': [] } %}
       {%- set tmp = subdirz.dirz.append(prefix ~'/by-name/'~ node) %}
-      {%- set tmp = subdirz.dirz.append(prefix ~'/by-name/'~ node ~ '/ifacesd') %}
-      {%- set tmp = subdirz.dirz.append(prefix ~'/by-name/'~ node ~ '/networkd') %}
+      {%- set tmp = subdirz.dirz.append(prefix ~'/by-name/'~ node ~ '/net') %}
+      {%- set tmp = subdirz.dirz.append(prefix ~'/by-name/'~ node ~ '/net/interfaces') %}
+      {%- set tmp = subdirz.dirz.append(prefix ~'/by-name/'~ node ~ '/net/ifcfg') %}
+      {%- set tmp = subdirz.dirz.append(prefix ~'/by-name/'~ node ~ '/net/networkd') %}
       {%- set tmp = subdirz.dirz.append(prefix ~'/by-name/'~ node ~'/cidata') %}
       {%-   set tmp = subdirz.linkz.append({ 'src': '../../nodes/by-name/'~ node ~'/cidata.iso', 'dest': '../dynamic/cidata/' ~ node ~ '.iso' }) %}
       {%- for group in hostvars[node].group_names %}
@@ -59,7 +61,7 @@
 - name: "{{ node }} :: Deploy interfaces.d configuration"
   template:
     src: "ifacesd.cfg.j2"
-    dest:  "{{ conf.root_dir }}/nodes/by-name/{{ node }}/ifacesd/net_{{ net }}.cfg"
+    dest:  "{{ conf.root_dir }}/nodes/by-name/{{ node }}/net/interfaces/net_{{ net }}.cfg"
     owner: "{{ conf.username }}"
     group: "{{ conf.username }}"
     mode:  "u=rwx,g=rx,o=rx"
@@ -74,7 +76,7 @@
 - name: "{{ node }} :: Deploy networkd configuration"
   template:
     src: "networkd.cfg.j2"
-    dest:  "{{ conf.root_dir }}/nodes/by-name/{{ node }}/networkd/net_{{ net }}.network"
+    dest:  "{{ conf.root_dir }}/nodes/by-name/{{ node }}/net/networkd/net_{{ net }}.network"
     owner: "{{ conf.username }}"
     group: "{{ conf.username }}"
     mode:  "u=rwx,g=rx,o=rx"
@@ -85,6 +87,22 @@
   - "{{ nets.keys() | sort }}"
   tags:
   - conf
+
+- name: "{{ node }} :: Deploy ifcfg configuration"
+  template:
+    src: "ifcfg.j2"
+    dest:  "{{ conf.root_dir }}/nodes/by-name/{{ node }}/net/ifcfg/ifcfg-{{ net }}"
+    owner: "{{ conf.username }}"
+    group: "{{ conf.username }}"
+    mode:  "u=rwx,g=rx,o=rx"
+    force: yes
+  loop_control:
+    loop_var: "net"
+  with_items:
+  - "{{ nets.keys() | sort }}"
+  tags:
+  - conf
+
 
 - name: "{{ node }} :: Deploy cloud-init data files"
   template:

@@ -10,6 +10,7 @@ options {
     allow-recursion { 127.0.0.1; {{ nets[cnc_net].cidr }}; };
     allow-transfer { none; };
     allow-update { none; };
+    allow-query     { 127.0.0.1; {{ nets[cnc_net].cidr }}; };
 
 {% if external_dns is defined and external_dns | length > 0 %}
         forwarders {

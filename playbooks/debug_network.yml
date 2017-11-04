@@ -1,0 +1,72 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#
+#    Nylox is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Nylox is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+---
+- hosts: localhost
+  tasks:
+
+  - name: "Debug user defined networks"
+    debug:
+      var: "{{ item }}"
+    with_items:
+    - "networks"
+
+  - name: "Debug node and group ids"
+    debug:
+      msg: "{{ hostvars[item].node_id }} {{ hostvars[item].group_id }}"
+    with_items:
+    - "{{ groups['all'] }}"
+
+  - name: "Deploy dynamic configuration as fact - nets"
+    copy:
+      content: "{{ { 'nets': nets } | to_nice_yaml(indent=2) }}"
+      dest: "/tmp/nets.fact"
+      owner: "root"
+      group: "root"
+      mode: "u=rw,g=r,o=r"
+
+  - name: "Deploy dynamic configuration as fact - allocations"
+    copy:
+      content: "{{ { 'allocations': allocations } | to_nice_yaml(indent=2) }}"
+      dest: "/tmp/allocations.fact"
+      owner: "root"
+      group: "root"
+      mode: "u=rw,g=r,o=r"
+
+  - name: "Deploy dynamic configuration as fact - ips"
+    copy:
+      content: "{{ { 'ips': ips } | to_nice_yaml(indent=2) }}"
+      dest: "/tmp/ips.fact"
+      owner: "root"
+      group: "root"
+      mode: "u=rw,g=r,o=r"
+
+  - name: "Debug per node iface_allocations"
+    debug:
+      msg: "{{ hostvars[item].iface_allocations }}"
+    with_items:
+    - "{{ groups['all'] }}"
+
+  - name: "Debug network dynamic run-time variables"
+    debug:
+      var: "{{ item }}"
+    with_items:
+    - "nets"
+    - "allocations"
+    - "ips"
+

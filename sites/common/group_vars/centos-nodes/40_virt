@@ -1,0 +1,6 @@
+source_image: "CentOS-7-x86_64-GenericCloud.qcow2"
+flavor: "s1.large"
+#ansible_user: "toor"
+
+xxx: "sites/group_vars/centos-nodes/40_virt"
+

@@ -40,7 +40,70 @@
   with_items:
   - "{{ root_dir }}"
   - "{{ root_dir }}/group_vars"
-  - "{{ root_dir }}/group_vars/all"
+
+- name: "Create group_vars directories "
+  file:
+    dest:  "{{ root_dir }}/group_vars/{{ item.path }}"
+    state: directory
+    owner: "root"
+    group: "root"
+    mode:  "u=rw,g=r,o=r"
+  with_filetree:
+  - "{{ root_dir }}/../common/group_vars/"
+  loop_control:
+    label: "{{ item.root }}{{ item.path }}"
+  when:
+  - item.state == 'directory'
+
+- name: "Create links to common site vars"
+  file:
+    src:   "../../../common/group_vars/all/{{ item | basename }}"
+    dest:  "{{ root_dir }}/group_vars/all/{{ item | basename }}"
+    state: link
+    owner: "root"
+    group: "root"
+    mode:  "u=rwx,g=rx,o=rx"
+    force: yes
+  with_fileglob:
+  - "{{ root_dir }}/../common/group_vars/all/*_*"
+  when: false
+
+- name: "Create links to common group vars"
+  file:
+    src:   "../../../common/group_vars/{{ item.src | replace(item.root, '') | dirname }}/{{ item.src | replace(item.root, '') | basename }}"
+    dest:  "{{ root_dir }}/group_vars/{{ item.src | replace(item.root, '') | dirname }}/{{ item.src | replace(item.root, '') | basename }}"
+    state: link
+    owner: "root"
+    group: "root"
+    mode:  "u=rwx,g=rx,o=rx"
+    force: yes
+  with_filetree:
+  - "{{ root_dir }}/../common/group_vars/"
+  loop_control:
+    label: "{{ item.root }}{{ item.path }}"
+  when:
+  - item.state == 'file'
+  - "'.git'   not in item.src"
+  - "'README' not in item.src"
+
+- name: "Deploy site_vars file"
+  template:
+    src: "sitevars.j2"
+    dest: "{{ root_dir }}/../common/site_vars/{{ item_name }}"
+    owner: "root"
+    group: "root"
+    mode: "u=rw,g=r,o=r"
+    force: no
+
+- name: "Create link to site_vars file"
+  file:
+    src:   "../../../common/site_vars/{{ item_name }}"
+    dest:  "{{ root_dir }}/group_vars/all/90_sitevars"
+    state: link
+    owner: "root"
+    group: "root"
+    mode:  "u=rwx,g=rx,o=rx"
+    force: yes
 
 - name: "Deploy default hosts file"
   template:
@@ -49,24 +112,6 @@
     owner: "root"
     group: "root"
     mode: "u=rw,g=r,o=r"
+    force: no
 
-- name: "Create links to common site vars"
-  file:
-    src: "../../../group_vars/{{ item | basename }}"
-    dest: "{{ root_dir }}/group_vars/all/{{ item | basename }}"
-    state: link
-    owner: "root"
-    group: "root"
-    mode:  "u=rwx,g=rx,o=rx"
-    force: yes
-  with_fileglob:
-  - "{{ root_dir }}/../group_vars/*_*"
-
-- name: "Deploy default site_vars file"
-  template:
-    src: "sitevars.j2"
-    dest: "{{ root_dir }}/group_vars/all/90_sitevars"
-    owner: "root"
-    group: "root"
-    mode: "u=rw,g=r,o=r"
 

@@ -1,0 +1,4 @@
+source_image: "cirros-0.3.5-x86_64-disk.img"
+#flavor: ""
+#ansible_user: "cirros"
+

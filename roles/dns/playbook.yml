@@ -17,7 +17,7 @@
 #
 
 ---
-- hosts: ha-nodes
+- hosts: dns-nodes
 #  gather_facts: no
 #  no_log: True
   roles:

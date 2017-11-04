@@ -40,7 +40,7 @@ networks:
     tags: "assign"
     seg: "0004"
 
-#iface_allocations: "ifi=0:tags=static,disabled,dhcp,xxx:net=classa"
+# iface_allocations: "ifi=0:tags=unconfigured"
 rack_id: 5
 
 cnc_net: classa
