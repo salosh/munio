@@ -87,3 +87,22 @@
   - conf
   - init
 
+- name: "Deploy resolv.conf"
+  template:
+    src:   "./{{ item }}.j2"
+    dest:  "/etc/resolvconf/resolv.conf.d/base"
+    owner: "root"
+    group: "root"
+    mode:  "u=rw,g=r,o=r"
+    force: yes
+  with_items:
+  - "resolv.conf"
+  tags:
+  - conf
+
+- name: "Update resolv.conf settings"
+  shell:
+    resolvconf -u
+  tags:
+  - conf
+
