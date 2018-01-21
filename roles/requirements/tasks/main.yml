@@ -17,27 +17,15 @@
 #
 
 ---
-- hosts: localhost
-#  gather_facts: no
-#  no_log: True
-  roles:
-  - { role: sysconf }
-  - { role: http, bind_host: "{{ nets[cnc_net].gateway }}" }
-  - { role: mctx }
-  - { role: dhcp }
-
-- import_playbook: "./virt.yml"
-- import_playbook: "./sshauth.yml"
-
-- hosts: ha-nodes
-#  gather_facts: no
-#  no_log: True
-  roles:
-  - { role: sysconf }
-  - { role: http }
-
-- import_playbook: "./dns.yml"
-- import_playbook: "./consul.yml"
-- import_playbook: "./elasticsearch.yml"
-- import_playbook: "./telegraf.yml"
+- include_tasks: "./parse_file.yml"
+  vars:
+    requirements_file: "{{ item }}"
+  with_items: |
+    {% set reqz = [] %}
+    {% set tmp = playbook_dir ~ '/../roles/*/requirements.csv' %}
+    {% set filez = tmp | fileglob %}
+    {% for file in filez %}
+    {%   set tmp = reqz.append(file | realpath) %}
+    {% endfor %}
+    {{ (reqz | list) }}
 

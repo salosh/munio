@@ -17,7 +17,8 @@
 #
 
 ---
-- hosts: ha-nodes
+- hosts: dns-nodes
+  strategy: free
 #  gather_facts: no
 #  no_log: True
   roles:

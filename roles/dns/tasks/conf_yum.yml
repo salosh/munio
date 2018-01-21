@@ -17,4 +17,61 @@
 #
 
 ---
+- set_fact:
+    conf_files:
+    - "named.conf"
+    conf_dir:  "/etc"
+    username:  "root"
+    groupname: "named"
+  tags:
+  - always
+
+- name: "Delete '{{ ansible_pkg_mgr }}' based configuration"
+  file:
+    dest:  "{{ conf_dir }}/{{ item }}"
+    state: absent
+  with_items:
+  - "{{ conf_files }}"
+  tags:
+  - clear
+
+- name: "Deploy '{{ ansible_pkg_mgr }}' based configuration"
+  template:
+    src:   "{{ ansible_pkg_mgr }}/{{ item }}.j2"
+    dest:  "{{ conf_dir }}/{{ item }}"
+    owner: "{{ username }}"
+    group: "{{ groupname }}"
+    mode:  "u=rw,g=r,o=r"
+    force: yes
+  with_items:
+  - "{{ conf_files }}"
+  tags:
+  - conf
+
+- name: "Deploy daemon additional configuration"
+  template:
+    src:   "./{{ item }}.j2"
+    dest:  "/var/named/{{ item }}"
+    owner: "{{ username }}"
+    group: "{{ groupname }}"
+    mode:  "u=rw,g=r,o=r"
+    force: yes
+  with_items:
+  - "domain.zone"
+  - "domain.rr.zone"
+  tags:
+  - conf
+
+- name: "Deploy resolv.conf"
+  template:
+    src:   "./{{ item }}.j2"
+    dest:  "/etc/{{ item }}"
+    owner: "root"
+    group: "root"
+    mode:  "u=rw,g=r,o=r"
+    force: yes
+  with_items:
+  - "resolv.conf"
+  tags:
+  - conf
 

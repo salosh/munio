@@ -17,27 +17,7 @@
 #
 
 ---
-- hosts: localhost
-#  gather_facts: no
-#  no_log: True
-  roles:
-  - { role: sysconf }
-  - { role: http, bind_host: "{{ nets[cnc_net].gateway }}" }
-  - { role: mctx }
-  - { role: dhcp }
-
-- import_playbook: "./virt.yml"
-- import_playbook: "./sshauth.yml"
-
-- hosts: ha-nodes
-#  gather_facts: no
-#  no_log: True
-  roles:
-  - { role: sysconf }
-  - { role: http }
-
-- import_playbook: "./dns.yml"
-- import_playbook: "./consul.yml"
-- import_playbook: "./elasticsearch.yml"
-- import_playbook: "./telegraf.yml"
+- name: "HelloWorld"
+  debug:
+    msg: "Is the future of our race not worth a single human life?"
 

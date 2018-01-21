@@ -1,0 +1,58 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#
+#    Nylox is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Nylox is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+---
+- name: "Locate role requirement files"
+  set_fact:
+    requirement_files: |
+      {% set reqz = [] %}
+      {% set tmp = playbook_dir ~ '/../roles/*/requirements.csv' %}
+      {% set filez = tmp | fileglob %}
+      {% for file in filez %}
+      {%   set tmp = reqz.append(file | realpath) %}
+      {% endfor %}
+      {{ (reqz) }}
+
+- name: "Slurp requirement files"
+  slurp:
+    src: "{{ item }}"
+  with_items:
+  - "{{ requirement_files }}"
+  register: slurp
+
+- name: "Parse requirements"
+  set_fact:
+    requirements: |
+      {% set reqz = { 'uri': [], 'git': [] } %}
+      {% for result in slurp.results %}
+      {%   set content = result['content'] | b64decode %}
+      {%   for line in content.split('\n') %}
+      {%     if line == '' or line.startswith('#') %}{% continue %}{% endif %}
+      {%     set req = line.split(',') %}
+      {%     if req[0] == 'git' %}
+      {%       set tmp = reqz.git.append(req[1]) %}
+      {%     elif req[0] == 'uri' %}
+      {%       set tmp = reqz.uri.append(req[1]) %}
+      {%     endif %}
+      {%   endfor %}
+      {% endfor %}
+      {{ (reqz) }}
+
+- name: "Debug"
+  debug:
+    var: requirements

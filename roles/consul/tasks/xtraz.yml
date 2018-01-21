@@ -1,0 +1,81 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#
+#    Nylox is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Nylox is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+---
+- name: "Deploy LB key files"
+  uri:
+    url: "http://{{ groups['consul-nodes'][0] }}:8500/v1/kv/{{ item }}"
+    method: PUT
+#    user: your_username
+#    password: your_pass
+#    body: "{{ lookup('file','issue.json') }}
+#    force_basic_auth: yes
+    status_code: 200
+#    body_format: json
+  with_items:
+  - "{{ lb_keys | list | unique | sort }}"
+  when:
+  - is_primary
+  tags:
+  - init
+
+#- name: "Create kv inventory"
+#  set_fact:
+#    kv_inventory: |
+#      {% set prefix = 'inventory' %}
+#      {% set keys = '' %}
+#      {{ (keys) }}
+
+- name: "Delete LB key inventory"
+  uri:
+    url: "http://{{ groups['consul-nodes'][0] }}:8500/v1/kv/inventory"
+    method: DELETE
+    status_code: 200
+  when:
+  - is_primary
+  tags:
+  - init
+  - clear
+
+- name: "Deploy LB key inventory groups"
+  uri:
+    url: "http://{{ groups['consul-nodes'][0] }}:8500/v1/kv/inventory/groups/{{ item }}"
+    method: PUT
+    body: "{{ groups[item] | to_nice_json(indent=2) }}"
+    status_code: 200
+    body_format: json
+  with_items:
+  - "{{ groups | list | unique | sort }}"
+  when:
+  - is_primary
+  tags:
+  - init
+
+- name: "Deploy LB key inventory nodes"
+  uri:
+    url: "http://{{ groups['consul-nodes'][0] }}:8500/v1/kv/inventory/nodes/{{ item }}"
+    method: PUT
+    body: "{{ hostvars[item] | to_nice_json(indent=2) }}"
+    status_code: 200
+    body_format: json
+  with_items:
+  - "{{ groups['all'] | list | unique | sort }}"
+  when:
+  - is_primary
+  tags:
+  - init

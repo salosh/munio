@@ -1,0 +1,42 @@
+---
+- name: "Slurp requirement file '{{ requirements_file }}'"
+  slurp:
+    src: "{{ requirements_file }}"
+  register: slurp
+
+- name: "Parse requirements"
+  set_fact:
+    requirements: |
+      {% set reqz = { 'uri': [], 'git': [] } %}
+      {% set content = slurp.content | b64decode %}
+      {% for line in content.split('\n') %}
+      {%   if line == '' or line.startswith('#') %}{% continue %}{% endif %}
+      {%   set req = line.split(',') %}
+      {%   if req[0] == 'git' %}
+      {%     set tmp = reqz.git.append(req[1]) %}
+      {%   elif req[0] == 'uri' %}
+      {%     set tmp = reqz.uri.append(req[1]) %}
+      {%   endif %}
+      {% endfor %}
+      {{ (reqz) }}
+
+- name: "Download 'git' requirements"
+  git:
+    repo: "{{ download_git }}"
+    dest: "{{ dir_reqs }}/"
+#    version: "{{ item.version }}"
+    force: yes
+  with_items:
+  - "{{ requirements.git }}"
+  loop_control:
+    loop_var: download_git
+
+- name: "Download 'uri' requirements"
+  get_url:
+    url: "{{ download_uri }}"
+    dest: "{{ dir_reqs }}/"
+    validate_certs: no
+  with_items:
+  - "{{ requirements.uri }}"
+  loop_control:
+    loop_var: download_uri

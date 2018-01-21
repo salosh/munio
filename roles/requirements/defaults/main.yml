@@ -17,27 +17,23 @@
 #
 
 ---
-- hosts: localhost
-#  gather_facts: no
-#  no_log: True
-  roles:
-  - { role: sysconf }
-  - { role: http, bind_host: "{{ nets[cnc_net].gateway }}" }
-  - { role: mctx }
-  - { role: dhcp }
+pacman:
+  packages: []
+  services: []
 
-- import_playbook: "./virt.yml"
-- import_playbook: "./sshauth.yml"
+apt:
+  packages: []
+  services: []
 
-- hosts: ha-nodes
-#  gather_facts: no
-#  no_log: True
-  roles:
-  - { role: sysconf }
-  - { role: http }
+yum:
+  packages: []
+  services: []
 
-- import_playbook: "./dns.yml"
-- import_playbook: "./consul.yml"
-- import_playbook: "./elasticsearch.yml"
-- import_playbook: "./telegraf.yml"
+conf: "{{ vars[ansible_pkg_mgr] | default({}) }}"
+#bind_host: "127.0.0.1"
+#bind_port: "12345"
+
+service_final:
+  state:   "restarted"
+  enabled: "yes"
 
