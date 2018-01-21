@@ -48,9 +48,15 @@ apt:
 
 yum:
   packages:
-  - apache
+  - httpd
   services:
   - httpd
+  username:  "apache"
+  groupname: "apache"
+  files:
+  - name: "httpd.conf"
+    path: "/etc/httpd/conf"
+  root_dir:  "/srv/http"
 
 conf: "{{ vars[ansible_pkg_mgr] }}"
 
@@ -60,3 +66,4 @@ bind_port: "80"
 service_final:
   state: "restarted"
   enabled: "yes"
+
