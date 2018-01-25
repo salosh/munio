@@ -1,0 +1,22 @@
+---
+- name: "Deploy proxy settings"
+  lineinfile:
+    path:   "/etc/bash.bashrc"
+    regexp: 'export http_proxy='
+    line:   'export http_proxy={{ proxy.protocol }}://{{ proxy.host }}:{{ proxy.port }}'
+    owner:  "root"
+    group:  "root"
+    mode:   "u=rw,g=r,o=r"
+  when:
+  - "ansible_pkg_mgr == 'pacman'"
+
+- name: "Deploy proxy settings"
+  lineinfile:
+    path:   "/etc/bash.bashrc"
+    regexp: 'export https_proxy='
+    line:   'export https_proxy={{ proxy.protocol }}://{{ proxy.host }}:{{ proxy.port }}'
+    owner:  "root"
+    group:  "root"
+    mode:   "u=rw,g=r,o=r"
+  when:
+  - "ansible_pkg_mgr == 'pacman'"
