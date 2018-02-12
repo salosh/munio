@@ -28,12 +28,16 @@ conf:
 
 consul_config_mode: client
 consul_log_level: INFO
-# <SSH> 0.9.3 is latest, but doesn't have webui
-consul_version: "0.9.0-rc1"
+consul_version: "1.0.6"
+consul_download_uri: "https://releases.hashicorp.com/consul/{{ consul_version }}"
 
-consul_archive_url:    "https://releases.hashicorp.com/consul/{{ consul_version }}"
-consul_archive_binary: "{{ dir_reqs }}/consul_{{ consul_version }}_linux_amd64.zip"
-consul_archive_webui:  "{{ dir_reqs }}/consul_{{ consul_version }}_web_ui.zip"
+requirements:
+  binary:
+    type:        "uri"
+    name:        "consul_{{ consul_version }}_linux_amd64.zip" 
+    remote_path: "{{ consul_download_uri }}/consul_{{ consul_version }}_linux_amd64.zip"
+    local_path:  "{{ dir_reqs }}/consul_{{ consul_version }}_linux_amd64.zip"
+    sha256:      "bcc504f658cef2944d1cd703eda90045e084a15752d23c038400cf98c716ea01"
 
 bind_host: "{{ ips[cnc_net][inventory_hostname].ip }}"
 #bind_port: ""

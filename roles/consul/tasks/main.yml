@@ -17,6 +17,13 @@
 #
 
 ---
+- name: "Download requirements"
+  include_tasks: "{{ role_path }}/../common/tasks/requirements.yml"
+  when:
+  - "connectivity_mode == 'online'"
+  tags:
+  - reqs
+
 # TODO add group
 - name: "Add user '{{ conf.username }}'"
   user:
@@ -25,34 +32,11 @@
   tags:
   - conf
 
-- name: "Extract archive"
+- name: "Extract binary '{{ requirements.binary.name }}'"
   unarchive:
-    src:  "{{ consul_archive_binary }}"
+    src:  "{{ requirements.binary.local_path }}"
     dest: /usr/bin
     mode: "u=rwx,g=rx,o=rx"
-  tags:
-  - bin
-
-- name: "Create 'webui' directory"
-  file:
-    path:  /opt/consul/ui/dist
-    state: directory
-    owner: "{{ conf.username }}"
-    group: "{{ conf.groupname }}"
-  when:
-  - "consul_config_mode == 'server'"
-  tags:
-  - bin 
-
-- name: "Extract webui archive '{{ consul_archive_webui }}'"
-  unarchive:
-    src:   "{{ consul_archive_webui }}"
-    dest:  /opt/consul/ui/dist
-    owner: "{{ conf.username }}"
-    group: "{{ conf.groupname }}"
-    mode:  "u=rwx,g=rx,o=rx"
-  when:
-  - "consul_config_mode == 'server'"
   tags:
   - bin
 
@@ -156,12 +140,9 @@
   tags:
   - conf
 
-- name: "Verify configuration"
+- name: "Validate configuration"
   shell:
-    consul validate {{ item }}
-  with_items:
-  - "{{ conf.conf_dir }}"
-  - "{{ conf.root_dir }}"
+    consul validate "{{ conf.root_dir }}"  "{{ conf.conf_dir }}"
   tags:
   - verify
 
@@ -213,7 +194,7 @@
     host:    "{{ item.host }}"
     port:    "{{ item.port }}"
     state:   started
-    timeout: 5
+    timeout: 15
   with_items:
   - host: "{{ bind_host }}"
     port: "8301"  

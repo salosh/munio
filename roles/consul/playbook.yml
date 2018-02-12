@@ -28,6 +28,7 @@
   - { role: consul }
 
 - hosts: consul-nodes[1:]
+  strategy: free
   gather_facts: no
 #  no_log: True
   vars:
