@@ -1,4 +1,35 @@
 ---
+- name: "Delete UDEV naming"
+  file:
+    dest:  "{{ item }}"
+    state: absent
+  with_items:
+  - "/etc/udev/rules.d/70-persistent-net.rules"
+  tags:
+  - clear
+
+- name: "Deploy UDEV naming script"
+  template:
+    src:   "udev.sh.j2"
+    dest:  "/usr/bin/udev"
+    owner: root
+    group: root
+    mode:  "u=rwx,g=rx,o=rx"
+    force: yes
+  tags:
+  - conf
+
+- name: "Execute UDEV naming script"
+  shell:
+    "{{ item }}"
+  with_items:
+  - "/usr/bin/udev"
+  when:
+  - "override_udev is defined"
+  - "inventory_hostname not in groups['hypervisor-nodes']"
+  tags:
+  - init
+
 - name: "Unify interface names"
   lineinfile:
     path:   "/etc/default/grub"
@@ -7,15 +38,25 @@
     owner:  "root"
     group:  "root"
     mode:   "u=rw,g=r,o=r"
+  register: grub_cmdline
 
-- name: "Apply GRUB settings"
+- name: "Apply GRUB settings for '{{ ansible_pkg_mgr }}'"
   shell:
     update-grub
   when:
+  - grub_cmdline | changed
   - "ansible_pkg_mgr == 'apt'"
 
-- name: "Apply GRUB settings"
+- name: "Apply GRUB settings for '{{ ansible_pkg_mgr }}'"
   shell:
     grub-mkconfig -o /boot/grub/grub.cfg
   when:
+  - grub_cmdline | changed
   - "ansible_pkg_mgr == 'pacman'"
+
+- name: "Apply GRUB settings for '{{ ansible_pkg_mgr }}'"
+  shell:
+    grub2-mkconfig -o /boot/grub2/grub.cfg
+  when:
+    "ansible_pkg_mgr == 'yum'"
+

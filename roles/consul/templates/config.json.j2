@@ -25,7 +25,6 @@
     "disable_update_check": true,
 {% if consul_config_mode == 'server' %}
     "server": true,
-    "ui_dir": "/opt/consul/ui/dist",
 {%    if bootstrap_expect is defined %}
     "bootstrap_expect": {{ bootstrap_expect }},
 {%    endif %}
