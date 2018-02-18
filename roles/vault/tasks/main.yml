@@ -1,0 +1,258 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#
+#    Nylox is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Nylox is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+---
+- name: "Download requirements"
+  include_tasks: "{{ role_path }}/../common/tasks/requirements.yml"
+  when:
+  - "connectivity_mode == 'online'"
+  tags:
+  - reqs
+
+# TODO add group
+- name: "Add user '{{ conf.username }}'"
+  user:
+    name:  "{{ conf.username }}"
+    state: present
+  tags:
+  - conf
+
+- name: "Extract binary '{{ requirements.binary.name }}'"
+  unarchive:
+    src:  "{{ requirements.binary.local_path }}"
+    dest: /usr/bin
+    mode: "u=rwx,g=rx,o=rx"
+  tags:
+  - bin
+
+- name: "Deploy service file"
+  template:
+    src:   vault_systemd.j2
+    dest:  /etc/systemd/system/vault.service
+    owner: root
+    group: root
+    mode:  "u=rw,g=r,o=r"
+  tags:
+  - service
+
+- name: "Stop service"
+  service:
+    name:    "{{ item }}"
+    state:   stopped
+    enabled: no
+  with_items:
+  - "{{ conf.services }}"
+  tags:
+  - service
+
+- name: "Delete configuration directories"
+  file:
+    dest:  "{{ item }}"
+    state: absent
+  with_items:
+  - "{{ conf.conf_dir }}"
+  - "{{ conf.root_dir }}"
+  tags:
+  - clear
+
+- name: "Create configuration directories"
+  file:
+    path:  "{{ item }}"
+    state: "directory"
+    owner: "{{ conf.username }}"
+    group: "{{ conf.groupname }}"
+  with_items:
+  - "{{ conf.conf_dir }}"
+  - "{{ conf.root_dir }}"
+  tags:
+  - conf
+
+- name: "Deploy configuration"
+  template:
+    src:   "{{ conf.conf_file }}.j2"
+    dest:  "{{ conf.conf_dir }}/{{ conf.conf_file }}"
+    owner: "{{ conf.username }}"
+    group: "{{ conf.groupname }}"
+    mode:  "u=rw,g=r,o=r"
+    force: yes
+  tags:
+  - conf
+
+- name: "Delete initialization data"
+  uri:
+    url: "http://{{ ansible_play_hosts[0] }}:8500/v1/kv/vault"
+    method: DELETE
+    status_code: 200
+  delegate_to: "{{ ansible_play_hosts[0] }}"
+  run_once: true
+  tags:
+  - init
+  - clear
+
+- name: "Final state for service - {{ service_final.state }}"
+  service:
+    name:    "{{ item }}"
+    state:   "{{ service_final.state }}"
+    enabled: "{{ service_final.enabled }}"
+  with_items:
+  - "{{ conf.services }}"
+  tags:
+  - service
+
+- name: "Wait for ports - server ports"
+  wait_for:
+    host:    "{{ item.host }}"
+    port:    "{{ item.port }}"
+    state:   started
+    timeout: 5
+  with_items:
+  - host: "{{ bind_host }}"
+    port: "{{ bind_port }}"
+  loop_control:
+    label: "{{ item.host }}:{{ item.port }}"
+  when:
+  - "service_final.state != 'stopped'"
+  tags:
+  - service
+  - verify
+
+- name: "Initialise Vault"
+  environment:
+    VAULT_ADDR: "http://{{ bind_host }}:{{ bind_port }}"
+  shell:
+    "{{ item }}"
+  with_items:
+  - "vault operator init > /root/.vault_secinfo"
+  args:
+    creates: "/root/.vault_secinfo"
+  delegate_to: "{{ ansible_play_hosts[0] }}"
+  run_once: true
+  register: init_vault
+  tags:
+  - init
+
+- name: "Slurp Vault security info"
+  slurp:
+    src: "/root/.vault_secinfo"
+  register: secinfo
+  delegate_to: "{{ ansible_play_hosts[0] }}"
+  run_once: true
+  tags:
+  - init
+  - vault_unseal
+  - vault_login
+
+- name: "Distribute Vault security info to all nodes"
+  copy:
+    content: "{{ secinfo['content'] | b64decode }}"
+    dest:    "/root/.vault_secinfo"
+    owner:   "root"
+    group:   "root"
+    mode:    "u=r,g=,o="
+    force:   yes
+  tags:
+  - init
+
+- name: "Parse unseal keys from initialization output"
+  set_fact:
+    vault_secinfo: |
+      {% set keyz = [] %}
+      {% set root_token = [] %}
+      {% set content = secinfo.content | b64decode %}
+      {% for line in content.split('\n') %}
+      {%   if 'Unseal Key' in line %}
+      {%     set key = line.split()[3] | regex_replace('\u001b\[0m','') %}
+      {%     set tmp = keyz.append(key) %}
+      {%   elif 'Initial Root Token' in line %}
+      {%     set tmp = root_token.append(line.split()[3] | regex_replace('\u001b\[0m','')) %}
+      {%   endif %}
+      {% endfor %}
+      {{ ({'keys' : keyz, 'root': root_token}) }}
+  tags:
+  - init
+  - vault_unseal
+  - vault_login
+
+- name: "Fail if missing initialization data"
+  assert:
+    that:
+    - vault_secinfo['root'] | length > 0
+    - vault_secinfo['keys'] | length >= 3
+  tags:
+  - verify
+
+- name: "Show debug information about initialization"
+  debug: msg="Security info *{{ item['root'][0][-12:] }}"
+  with_items:
+  - "{{ vault_secinfo }}"
+  loop_control:
+    label: "Security info *{{ item['root'][0][-12:] }}"
+  tags:
+  - trace
+  when:
+  - vault_debug_mode is defined
+  - vault_debug_mode | bool
+
+- name: "Unseal Vault"
+  environment:
+    VAULT_ADDR: "http://{{ bind_host }}:{{ bind_port }}"
+  shell:
+    "vault operator unseal {{ item }}"
+  with_items:
+  - "{{ vault_secinfo['keys'] }}"
+  loop_control:
+    label: "Unsealing using key *{{ item[-12:] }}"
+  register: unseal_vault
+  tags:
+  - init
+  - vault_unseal
+
+- debug: var=unseal_vault
+  tags:
+  - trace
+  when:      
+  - vault_debug_mode is defined
+  - vault_debug_mode | bool  
+
+- name: "Login Vault"
+  environment:
+    VAULT_ADDR: "http://{{ bind_host }}:{{ bind_port }}"
+  shell:
+    "vault login {{ vault_secinfo['root'][0] }}"
+  register: login_vault
+  tags:
+  - init
+  - vault_login
+
+- debug: var=login_vault
+  tags:
+  - trace
+  when:      
+  - vault_debug_mode is defined
+  - vault_debug_mode | bool  
+
+- name: "Enable password authentication"
+  environment:
+    VAULT_ADDR: "http://{{ bind_host }}:{{ bind_port }}"
+  shell:
+    "vault auth enable userpass"
+  delegate_to: "{{ ansible_play_hosts[0] }}"
+  run_once: true
+  tags:
+  - init
+
