@@ -1,0 +1,10 @@
+[Unit]
+Description=Vault service
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/vault server -config=/etc/vault/config.hcl
+ExecReload=/usr/bin/kill -HUP $MAINPID
+
+[Install]
+WantedBy=multi-user.target

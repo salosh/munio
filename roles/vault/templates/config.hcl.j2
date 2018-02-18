@@ -1,0 +1,18 @@
+cluster_name = "nylox"
+plugin_directory = "/etc/vault.d"
+
+storage "consul" {
+  address = "{{ bind_host }}:8500"
+  path    = "vault"
+}
+
+listener "tcp" {
+  address     = "{{ bind_host }}:{{ bind_port }}"
+  tls_disable = 1
+}
+
+#telemetry {
+#  statsite_address = "{{ bind_host }}:8125"
+#  disable_hostname = true
+#}
+
