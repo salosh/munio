@@ -1,0 +1,143 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#
+#    Nylox is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Nylox is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+---
+- name: "Install packages"
+  vars:
+    packages: "{{ conf.packages }}"
+  include_tasks: "{{ role_path }}/../common/tasks/{{ ansible_pkg_mgr }}/package.yml"
+  tags:
+  - bin
+
+- name: "Stop service"
+  service:
+    name:    "{{ item }}"
+    state:   stopped
+    enabled: no
+  with_items:
+  - "{{ conf.services }}"
+  tags:
+  - service
+
+- name: "Create partition for brick"
+  parted:
+    device: "{{ physical_device }}"
+    number: 1
+    state:  present
+
+- name: "Create filesystem for brick"
+  filesystem:
+    fstype: xfs
+    dev:    "{{ physical_device }}1"
+
+- name: "Create directory"
+  file:
+    dest:  "{{ item }}"
+    state: directory
+    owner: "{{ conf.username }}"
+    group: "{{ conf.groupname }}"
+    mode:  "u=rwx,g=rx,o=rx"
+  with_items:
+  - "/data/brick1/gv0"
+  - "/shared"
+  tags:
+  - conf
+
+- name: "Mount brick"
+  mount:
+    path:   "/data/brick1"
+    src:    "{{ physical_device }}1"
+    fstype: xfs
+    state:  mounted
+
+- name: "Deploy '{{ ansible_pkg_mgr }}' based configuration"
+  include_tasks: "./conf_{{ ansible_pkg_mgr }}.yml"
+
+- name: "Final state for service - {{ service_final.state }}"
+  service:
+    name:    "{{ item }}"
+    state:   "{{ service_final.state }}"
+    enabled: "{{ service_final.enabled }}"
+  with_items:
+  - "{{ conf.services }}"
+  tags:
+  - service
+
+- name: "Wait for ports"
+  wait_for:
+    host:    "{{ item.host }}"
+    port:    "{{ item.port }}"
+    state:   started
+    timeout: 5
+  with_items:
+  - host: "{{ bind_host }}"
+    port: "{{ bind_port }}"
+  loop_control:
+    label: "{{ item.host }}:{{ item.port }}"
+  when:
+  - "service_final.state != 'stopped'"
+  tags:
+  - service
+  - verify
+
+- name: "Probe peers"
+  shell:
+    "gluster peer probe {{ item }}.{{ domain_name }}"
+  with_items:
+  - "{{ groups['glusterfs-nodes'] | sort }}"
+  run_once: true
+  tags:
+  - init
+
+- name: "Gather probed peers status"
+  shell:
+    "gluster peer status"
+  register: glusterfs_peer_status
+  tags:
+  - init
+  - debug
+
+- name: "View gathered probed peers status"
+  debug:
+    var: glusterfs_peer_status
+  tags:
+  - init
+  - debug
+
+- name: "Create GlusterFS shared volume"
+  gluster_volume:
+    state: present
+    name:  gv1
+    bricks: /data/brick1/gv0
+    rebalance: yes
+    cluster: "{{ groups['glusterfs-nodes'] | sort }}"
+  run_once: true
+  delegate_to: "{{ ansible_play_hosts[0] }}"
+
+- name: "Start GlusterFS shared volume"
+  gluster_volume:
+    state: started
+    name:  gv1
+
+- name: "Mount GlusterFS shared volume"
+  mount:
+    path:   "/shared"
+    src:    "{{ inventory_hostname }}:/gv1"
+    fstype: glusterfs
+    state:  mounted
+

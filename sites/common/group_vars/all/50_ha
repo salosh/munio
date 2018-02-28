@@ -20,10 +20,14 @@
 #
 # TODO XXX change to script, inventory_hostname wont resolve correctly on secondaries
 lb_services:
-  vip:
-    hostname: "vip.service.lb"
+  leader:
+    hostname: "leader.service.lb"
     apply_to: "consul-nodes"
     watch_script: "consul operator raft list-peers | grep {{ inventory_hostname }} | grep leader || exit 2"
+  vault:
+    hostname: "vault.service.lb"
+    bind_port: 8200
+    apply_to: "vault-nodes"
   dns:
     hostname: "dns.service.lb"
     bind_port: 53
@@ -43,5 +47,30 @@ lb_services:
     hostname: "redis.service.lb"
     bind_port: 6379
     apply_to: "redis-nodes"
+  glusterfs:
+    hostname: "glusterfs.service.lb"
+    bind_port: 24007
+    apply_to: "glusterfs-nodes"
+  mariadb:
+    hostname: "mariadb.service.lb"
+    bind_port: 3306
+    apply_to: "mariadb-nodes"
+  keystoneadmin:
+    hostname: "keystoneadmin.service.lb"
+    bind_port: 35357
+    apply_to: "keystone-nodes"
+  keystonepublic:
+    hostname: "keystonepublic.service.lb"
+    bind_port: 5000
+    apply_to: "keystone-nodes"
+  glanceapi:
+    hostname: "glanceapi.service.lb"
+    bind_port: 9292
+    apply_to: "glance-nodes"
+  glanceregistry:
+    hostname: "glanceregistry.service.lb"
+    bind_port: 9191
+    apply_to: "keystone-nodes"
+
 
 lb_keys: []
