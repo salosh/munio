@@ -203,7 +203,7 @@
   loop_control:
     label: "Security info *{{ item['root'][0][-12:] }}"
   tags:
-  - trace
+  - debug
   when:
   - vault_debug_mode is defined
   - vault_debug_mode | bool
@@ -224,7 +224,7 @@
 
 - debug: var=unseal_vault
   tags:
-  - trace
+  - debug
   when:      
   - vault_debug_mode is defined
   - vault_debug_mode | bool  
@@ -241,7 +241,7 @@
 
 - debug: var=login_vault
   tags:
-  - trace
+  - debug
   when:      
   - vault_debug_mode is defined
   - vault_debug_mode | bool  
