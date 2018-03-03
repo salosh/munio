@@ -1,11 +1,12 @@
 # TODO desc, prefix, sort
+interface_name_prefix: "eth"
 
 allocations: |
   {% set allocs = {'bynet':{}, 'byhost':{}, 'byiface':{} }                                %}
   {% for host in groups['all'] | sort                                                     %}
   {%   set allocz = hostvars[host].iface_allocations | default(iface_allocations)         %}
   {%   for alloc in allocz.split(';')                                                     %}
-  {%     set entry = {'ifnames': [], 'params': {}}                                        %}
+  {%     set entry = {'ifnames': [], 'params': {}, 'string': alloc}                       %}
   {%     for param in alloc.split(':')                                                    %}
   {%       set key = param.split('=')[0].lower()                                          %}
   {%       set value = param.split('=')[1] | default('')                                  %}
@@ -16,7 +17,7 @@ allocations: |
   {%         endfor                                                                       %}
   {%       elif key == 'ifi'                                                              %}
   {%         for iface in value.split(',') | sort | unique                                %}
-  {%           set tmp = entry.ifnames.append('eth' ~ iface)                              %}
+  {%           set tmp = entry.ifnames.append(interface_name_prefix ~ iface)              %}
   {%         endfor                                                                       %}
   {%       endif                                                                          %}
   {%     endfor                                                                           %}
@@ -59,6 +60,7 @@ nets: |
   {%   set hostmin = networks[key].hostmin | d( cidr | ipaddr('1')  | ipaddr('address') ) %}
   {%   set hostmax = networks[key].hostmax | d( cidr | ipaddr('-3') | ipaddr('address') ) %}
   {%   set tmp = netz[key].update({'tags':      net_tags.split(',') })                    %}
+  {%   set tmp = netz[key].update({'kvtags':    net_kvtags })                             %}
   {%   set tmp = netz[key].update({'cidr':      cidr })                                   %}
   {%   set tmp = netz[key].update({'gateway':   gateway })                                %}
   {%   set tmp = netz[key].update({'hostmin':   hostmin })                                %}
@@ -124,6 +126,9 @@ ips: |
   {%     endif                                                                            %}
   {%     set host_entry = {}                                                              %}
   {%     set tmp = host_entry.update({'ip': ip_verified })                                %}
+  {%     if 'unverified' in net_tags                                                      %}
+  {%       set tmp = host_entry.update({'ip': ip })                                       %}
+  {%     endif                                                                            %}
   {%     set tmp = host_entry.update({'cidr': cidr })                                     %}
   {%     set mac = ['52', '54', '00']                                                     %}
   {%     set tmp = mac.append( '%02x' % (nets[key].idx)  | int )                          %}
@@ -133,8 +138,8 @@ ips: |
   {%     set tmp = host_entry.update({'vmac': vmac })                                     %}
   {%     set tmp = ipz[key].vmacs.update(  {vmac: host })                                 %}
   {%     if 'mac' in hvars                                                                %}
-  {%     set tmp = host_entry.update({'mac': hvars.mac })                                     %}
-  {%     set tmp = ipz[key].macs.update(  {hvars.mac: host })                                 %}
+  {%       set tmp = host_entry.update({'mac': hvars.mac })                               %}
+  {%       set tmp = ipz[key].macs.update( {hvars.mac: host })                            %}
   {%     endif                                                                            %}
   {%     if trace_mode is defined and trace_mode | bool                                   %}
   {%       set tmp = host_entry.update({'ofst_min': ofst_min })                           %}
