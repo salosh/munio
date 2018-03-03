@@ -17,6 +17,13 @@
 #
 
 ---
+- name: "Install prerequisites packages"
+  vars:
+    packages: "{{ conf.pre_packages }}"
+  include_tasks: "{{ role_path }}/../common/tasks/{{ ansible_pkg_mgr }}/package.yml"
+  tags:
+  - bin
+
 - name: "Install packages"
   vars:
     packages: "{{ conf.packages }}"
@@ -33,19 +40,14 @@
   - "{{ conf.services }}"
   tags:
   - service
+  - clear
 
-- name: "Create partition for brick"
-  parted:
-    device: "{{ physical_device }}"
-    number: 1
-    state:  present
+- name: "Clear bricks configuration"
+  include_tasks: "./clear.yml"
+  when:
+  - purge_previous_configuration is defined
 
-- name: "Create filesystem for brick"
-  filesystem:
-    fstype: xfs
-    dev:    "{{ physical_device }}1"
-
-- name: "Create directory"
+- name: "Create shared directory"
   file:
     dest:  "{{ item }}"
     state: directory
@@ -53,20 +55,16 @@
     group: "{{ conf.groupname }}"
     mode:  "u=rwx,g=rx,o=rx"
   with_items:
-  - "/data/brick1/gv0"
-  - "/shared"
+  - "{{ shared_volume.path }}"
   tags:
+  - init
   - conf
 
-- name: "Mount brick"
-  mount:
-    path:   "/data/brick1"
-    src:    "{{ physical_device }}1"
-    fstype: xfs
-    state:  mounted
+#- name: "Deploy '{{ ansible_pkg_mgr }}' based configuration"
+#  include_tasks: "./conf_{{ ansible_pkg_mgr }}.yml"
 
-- name: "Deploy '{{ ansible_pkg_mgr }}' based configuration"
-  include_tasks: "./conf_{{ ansible_pkg_mgr }}.yml"
+- name: "Deploy bricks configuration"
+  include_tasks: "./bricks.yml"
 
 - name: "Final state for service - {{ service_final.state }}"
   service:
@@ -120,24 +118,38 @@
   - debug
 
 - name: "Create GlusterFS shared volume"
+  vars:
+    brick_paths: |
+      {% set path_list = [] -%}
+      {% for brick in (bricks | map(attribute='name') | list | unique | sort) %}
+      {%   set tmp = path_list.append(conf.root_dir ~'/'~ brick ~'/gv0') -%}
+      {% endfor %}
+      {{- (path_list) -}}
   gluster_volume:
-    state: present
-    name:  gv1
-    bricks: /data/brick1/gv0
+    state:     present
+    name:      "{{ shared_volume.name }}"
+    bricks:    "{{ brick_paths | join(',') }}"
     rebalance: yes
-    cluster: "{{ groups['glusterfs-nodes'] | sort }}"
+    cluster:   "{{ groups['glusterfs-nodes'] | sort }}"
+    replicas:  "{{ groups['glusterfs-nodes'] | length }}"
   run_once: true
   delegate_to: "{{ ansible_play_hosts[0] }}"
+  tags:
+  - init
 
 - name: "Start GlusterFS shared volume"
   gluster_volume:
     state: started
-    name:  gv1
+    name:  "{{ shared_volume.name }}"
+  tags:
+  - init
 
 - name: "Mount GlusterFS shared volume"
   mount:
-    path:   "/shared"
-    src:    "{{ inventory_hostname }}:/gv1"
+    path:   "{{ shared_volume.path  }}"
+    src:    "{{ inventory_hostname }}:/{{ shared_volume.name }}"
     fstype: glusterfs
     state:  mounted
-
+  tags:
+  - init
+  - conf

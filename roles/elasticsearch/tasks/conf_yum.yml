@@ -17,4 +17,7 @@
 #
 
 ---
+- name: "HelloWorld"
+  debug:
+    msg: "Is the future of our race not worth a single human life?"
 
