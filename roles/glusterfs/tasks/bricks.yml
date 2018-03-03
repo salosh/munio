@@ -1,0 +1,92 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#
+#    Nylox is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Nylox is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+---
+- name: "Brick :: Create partition"
+  parted:
+    state:  present
+    device: "{{ item }}"
+    number: 1
+  with_items:
+  - "{{ bricks | map(attribute='dev_name') | list | unique | sort }}"
+  tags:
+  - init
+
+- name: "Brick :: Create underlying PV"
+  lvg:
+    vg:  "{{ brick.vg_name }}"
+    pvs: "{{ brick.dev_name }}1"
+  with_items:
+  - "{{ bricks }}"
+  loop_control:
+    loop_var: "brick"
+  tags:
+  - init
+
+- name: "Brick :: Create LV"
+  lvol:
+    vg:    "{{ brick.vg_name }}"
+    lv:    "{{ brick.name }}"
+    size:  "{{ brick.size }}"
+    state: present
+  with_items:
+  - "{{ bricks }}"
+  loop_control:
+    loop_var: "brick"
+  tags:
+  - init
+
+- name: "Brick :: Create filesystem for LV"
+  filesystem:
+    fstype: xfs
+    dev:    "/dev/mapper/{{ brick.vg_name }}-{{ brick.name }}"
+  with_items:
+  - "{{ bricks }}"
+  loop_control:
+    loop_var: "brick"
+  tags:
+  - init
+
+- name: "Brick :: Create directory"
+  file:
+    dest:  "{{ conf.root_dir }}/{{ brick.name }}/gv0"
+    state: directory
+    owner: "{{ conf.username }}"
+    group: "{{ conf.groupname }}"
+    mode:  "u=rwx,g=rx,o=rx"
+  with_items:
+  - "{{ bricks }}"
+  loop_control:
+    loop_var: "brick"
+  tags:
+  - init
+  - conf
+
+- name: "Brick :: Mount"
+  mount:
+    path:   "{{ conf.root_dir }}/{{ brick.name }}"
+    src:    "/dev/mapper/{{ brick.vg_name }}-{{ brick.name }}"
+    fstype: xfs
+    state:  mounted
+  with_items:
+  - "{{ bricks }}"
+  loop_control:
+    loop_var: "brick"
+  tags:
+  - init
+  - conf

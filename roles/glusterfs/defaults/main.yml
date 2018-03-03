@@ -18,6 +18,7 @@
 
 ---
 pacman:
+  pre_packages: []
   packages:
   - rpcbind
   - glusterfs
@@ -29,9 +30,10 @@ pacman:
   files:
   - name: "default.yml"
     path: "/tmp"
-  root_dir:  "/tmp/default"
+  root_dir:  "/srv/gfs"
 
 apt:
+  pre_packages: []
   packages:
   - "glusterfs-server"
   services: []
@@ -40,21 +42,41 @@ apt:
   files:
   - name: "default.yml"
     path: "/tmp"
-  root_dir:  "/tmp/default"
+  root_dir:  "/srv/gfs"
 
 yum:
-  packages: []
-  services: []
-  username:  "default"
-  groupname: "default"
+  pre_packages:
+  - "centos-release-gluster37"
+  packages:
+  - "glusterfs"
+  - "glusterfs-cli"
+  - "glusterfs-libs"
+  - "glusterfs-server"
+  services:
+  - "glusterd"
+  username:  "root"
+  groupname: "root"
   files:
   - name: "default.yml"
     path: "/tmp"
-  root_dir:  "/tmp/default"
+  root_dir:  "/srv/gfs"
 
-physical_device: "/dev/sdb"
+bricks:
+  - name:     "brick1"
+    dev_name: "/dev/sdb"
+    vg_name:  gfs
+    size:     "50%FREE"
+  - name:     "brick2"
+    dev_name: "/dev/sdb"
+    vg_name:  gfs
+    size:     "100%FREE"
 
 conf: "{{ vars[ansible_pkg_mgr] | default({}) }}"
+
+shared_volume:
+  name: "gv1"
+  path: "{{ conf.root_dir }}/shared"
+
 bind_host: "{{ ips[cnc_net][inventory_hostname].ip }}"
 bind_port: "24007"
 

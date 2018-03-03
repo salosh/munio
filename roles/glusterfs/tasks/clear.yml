@@ -1,0 +1,101 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#
+#    Nylox is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Nylox is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+---
+- name: "Kill GlusterFS processes"
+  shell:
+    for pid in $(pidof /usr/bin/gluster*); do kill -9 ${pid}; done
+  tags:
+  - clear
+
+- name: "Remove GlusterFS shared volumes from fstab"
+  mount:
+    path:  "{{ shared_volume.path  }}"
+    state: absent
+  tags:
+  - clear
+
+- name: "Remove bricks from fstab"
+  vars:
+    brick_paths: |
+      {% set path_list = [] -%}
+      {% for brick in (bricks | map(attribute='name') | list | unique | sort) %}
+      {%   set tmp = path_list.append(conf.root_dir ~'/'~ brick ~'/gv0') -%}
+      {% endfor %}
+      {{- (path_list) -}}
+  mount:
+    state: absent
+    path:  "{{ item }}"
+  with_items:
+  - "{{ brick_paths }}"
+  tags:
+  - clear
+
+- name: "Unmount LVs"
+  vars:
+    lv_paths: |
+      {% set path_list = [] -%}
+      {% for brick in (bricks | map(attribute='name') | list | unique | sort) %}
+      {%   set tmp = path_list.append(conf.root_dir ~'/'~ brick) -%}
+      {% endfor %}
+      {{- (path_list) -}}
+  shell:
+    test -e {{ item }} && umount -f {{ item }} || echo OK
+  with_items:
+  - "{{ lv_paths }}"
+  tags:
+  - clear
+
+- name: "Remove LVs from fstab"
+  vars:
+    lv_paths: |
+      {% set path_list = [] -%}
+      {% for brick in (bricks | map(attribute='name') | list | unique | sort) %}
+      {%   set tmp = path_list.append(conf.root_dir ~'/'~ brick) -%}
+      {% endfor %}
+      {{- (path_list) -}}
+  mount:
+    state: absent
+    path:  "{{ item }}"
+  with_items:
+  - "{{ lv_paths }}"
+  tags:
+  - clear
+
+- name: "Remove LVs"
+  lvol:
+    vg:    "{{ brick.vg_name }}"
+    lv:    "{{ brick.name }}"
+    state: absent 
+    force: yes
+  with_items:
+  - "{{ bricks }}"
+  loop_control:
+    loop_var: "brick"
+  tags:
+  - clear
+
+- name: "Remove directories"
+  shell:
+    rm -rf {{ item }}
+  with_items:
+  - "{{ conf.root_dir }}"
+  - "/var/lib/glusterd/*"
+  tags:
+  - clear
+
