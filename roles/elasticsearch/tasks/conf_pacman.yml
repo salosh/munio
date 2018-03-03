@@ -17,37 +17,7 @@
 #
 
 ---
-- set_fact:
-    username:  "root"
-    groupname: "elasticsearch"
-    root_dir:  "/var/lib/elasticsearch"
-    conf_file: "elasticsearch.yml"
-    conf_dir:  "/etc/elasticsearch"
-  tags:
-  - always
-
-- name: "Deploy '{{ ansible_pkg_mgr }}' based configuration"
-  template:
-    src:   "{{ ansible_pkg_mgr }}/{{ conf_file }}.j2"
-    dest:  "{{ conf_dir }}/{{ conf_file }}"
-    owner: "{{ username }}"
-    group: "{{ groupname }}"
-    mode:  "u=rw,g=r,o="
-    force: yes
-  tags:
-  - conf
-
-- name: "Deploy daemon additional configuration"
-  template:
-    src:   "{{ ansible_pkg_mgr }}/{{ item }}.j2"
-    dest:  "{{ conf_dir }}/{{ item }}"
-    owner: "{{ username }}"
-    group: "{{ groupname }}"
-    mode:  "u=rw,g=r,o="
-    force: yes
-  with_items:
-  - "log4j2.properties"
-  tags:
-  - conf
-
+- name: "HelloWorld"
+  debug:
+    msg: "Is the future of our race not worth a single human life?"
 

@@ -30,10 +30,12 @@ node.attr.rack: {{ rack_id | int }}
 #
 # Path to directory where to store the data (separate multiple locations by comma):
 #
-path.data: /var/lib/elasticsearch
+path.data: {{ conf.root_dir }}
 #
 # Path to log files:
 #
+#path.logs: /path/to/logs
+# TODO change to syslog
 path.logs: /var/log/elasticsearch
 #
 # ----------------------------------- Memory -----------------------------------
@@ -52,10 +54,12 @@ path.logs: /var/log/elasticsearch
 #
 # Set the bind address to a specific IP (IPv4 or IPv6):
 #
+#network.host: 192.168.0.1
 network.host: {{ bind_host }}
 #
 # Set a custom port for HTTP:
 #
+#http.port: 9200
 http.port: {{ bind_port }}
 #
 # For more information, consult the network module documentation.
@@ -65,6 +69,7 @@ http.port: {{ bind_port }}
 # Pass an initial list of hosts to perform discovery when new node is started:
 # The default list of hosts is ["127.0.0.1", "[::1]"]
 #
+#discovery.zen.ping.unicast.hosts: ["host1", "host2"]
 {% set zen_ping_unicast_hosts = [] %}
 {% for node in groups['elasticsearch-nodes'] %}
 {%   set tmp = zen_ping_unicast_hosts.append('"' ~ ips[cnc_net][node].ip ~ '"') %}
@@ -73,7 +78,8 @@ discovery.zen.ping.unicast.hosts: [{{ zen_ping_unicast_hosts | join(',') }}]
 #
 # Prevent the "split brain" by configuring the majority of nodes (total number of master-eligible nodes / 2 + 1):
 #
-#discovery.zen.minimum_master_nodes: 3
+#discovery.zen.minimum_master_nodes:
+discovery.zen.minimum_master_nodes: {{ (groups['elasticsearch-nodes'] | length // 2) + 1 }} 
 #
 # For more information, consult the zen discovery module documentation.
 #

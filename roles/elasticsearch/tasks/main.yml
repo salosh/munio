@@ -17,20 +17,76 @@
 #
 
 ---
-- name: "Add repositories"
-  vars:
-    repos: "{{ conf.repos }}"
-  include_tasks: "{{ role_path }}/../common/tasks/{{ ansible_pkg_mgr }}/repo.yml"
+- name: "Download requirements"
+  include_tasks: "{{ role_path }}/../common/tasks/requirements.yml"
+  when:
+  - "connectivity_mode == 'online'"
   tags:
-  - repo
+  - reqs
+
+- name: "Create OS groups"
+  group:
+    name:   "{{ conf.groupname }}"
+    system: "yes"
+    state:  "present"
+  tags:
+  - init
+
+- name: "Create OS users"
+  user:
+    name:      "{{ conf.username }}"
+    group:     "{{ conf.groupname }}"
+    append:    "yes"
+    shell:     "/bin/false"
+    home:      "/var/lib/{{ conf.username }}"
+    move_home: "yes"
+    system:    "yes"
+    state:     "present"
+  tags:
+  - init
+
+- name: "Extract binary '{{ requirements.binary.name }}'"
+  unarchive:
+    src:  "{{ requirements.binary.local_path }}"
+    dest: "/usr/share"
+    owner: "{{ conf.username }}"
+    group: "{{ conf.username }}"
+    mode: "u=rwx,g=rx,o=rx"
+  tags:
   - bin
 
-- name: "Install packages"
-  vars:
-    packages: "{{ conf.packages }}"
-  include_tasks: "{{ role_path }}/../common/tasks/{{ ansible_pkg_mgr }}/package.yml"
+- name: "Create working directory link"
+  file:
+    src: "{{ conf.work_dir }}-{{ elasticsearch_version }}"
+    dest: "{{ conf.work_dir }}"
+    state: link
+    owner: "{{ conf.username }}"
+    group: "{{ conf.username }}"
+    mode:  "u=rwx,g=rx,o=rx"
+    force: yes
+
+- name: "Create binary links"
+  file:
+    src: "../share/elasticsearch-{{ elasticsearch_version }}/bin/{{ item }}"
+    dest: "/usr/bin/{{ item }}"
+    state: link
+    owner: "{{ conf.username }}"
+    group: "{{ conf.username }}"
+    mode:  "u=rwx,g=rx,o=rx"
+    force: yes
+  with_items:
+  - "elasticsearch-env"
+  - "elasticsearch"
+
+- name: "Deploy service file"
+  template:
+    src:   elasticsearch_systemd.j2
+    dest:  /etc/systemd/system/elasticsearch.service
+    owner: root
+    group: root
+    mode:  "u=rw,g=r,o=r"
   tags:
-  - bin
+  - service
 
 - name: "Stop service"
   service:
@@ -44,6 +100,45 @@
 
 - name: "Deploy '{{ ansible_pkg_mgr }}' based configuration"
   include_tasks: "./conf_{{ ansible_pkg_mgr }}.yml"
+
+- name: "Create required directories"
+  file:
+    path:  "{{ item }}"
+    state: "directory"
+    owner: "{{ conf.username }}"
+    group: "{{ conf.groupname }}"
+    mode: "u=rwx,g=rwx,o=rx"
+  with_items:
+  - "{{ conf.conf_dir }}"
+  - "{{ conf.root_dir }}"
+  - "{{ conf.log_dir }}"
+  tags:
+  - conf
+
+- name: "Create directory links"
+  file:
+    src: "{{ conf.log_dir }}"
+    dest: "{{ conf.work_dir }}-{{ elasticsearch_version }}/logs"
+    state: link
+    owner: "{{ conf.username }}"
+    group: "{{ conf.username }}"
+    mode:  "u=rwx,g=rx,o=rx"
+    force: yes
+
+- name: "Deploy configuration"
+  template:
+    src:   "{{ item }}.j2"
+    dest:  "{{ conf.conf_dir }}/{{ item }}"
+    owner: "{{ conf.username }}"
+    group: "{{ conf.groupname }}"
+    mode: "u=rwx,g=rwx,o=rx"
+    force: yes
+  with_items:
+  - "elasticsearch.yml"
+  - "log4j2.properties"
+  - "jvm.options"
+  tags:
+  - conf
 
 - name: "Deploy advanced memory settings"
   sysctl: name={{ item.key }} value={{ item.value }}
