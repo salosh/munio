@@ -1,0 +1,162 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#
+#    Nylox is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Nylox is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+---
+- name: "Download requirements"
+  include_tasks: "{{ role_path }}/../common/tasks/requirements.yml"
+  when:
+  - "connectivity_mode == 'online'"
+  tags:
+  - reqs
+
+- name: "Create OS groups"
+  group:
+    name:   "{{ conf.groupname }}"
+    system: "yes"
+    state:  "present"
+  tags:
+  - init
+
+- name: "Create OS users"
+  user:
+    name:      "{{ conf.username }}"
+    group:     "{{ conf.groupname }}"
+    append:    "yes"
+    shell:     "/bin/false"
+    home:      "/var/lib/{{ conf.username }}"
+    move_home: "yes"
+    system:    "yes"
+    state:     "present"
+  tags:
+  - init
+
+- name: "Extract binary '{{ requirements.binary.name }}'"
+  unarchive:
+    src:  "{{ requirements.binary.local_path }}"
+    dest: "/usr/share"
+    owner: "{{ conf.username }}"
+    group: "{{ conf.username }}"
+    mode: "u=rwx,g=rx,o=rx"
+  tags:
+  - bin
+
+- name: "Create working directory link"
+  file:
+    src: "{{ conf.work_dir }}-v{{ etcd_version }}-linux-amd64"
+    dest: "{{ conf.work_dir }}"
+    state: link
+    owner: "{{ conf.username }}"
+    group: "{{ conf.username }}"
+    mode:  "u=rwx,g=rx,o=rx"
+    force: yes
+
+- name: "Create binary links"
+  file:
+    src: "{{ conf.work_dir }}-v{{ etcd_version }}-linux-amd64/{{ item }}"
+    dest: "/usr/bin/{{ item }}"
+    state: link
+    owner: "{{ conf.username }}"
+    group: "{{ conf.username }}"
+    mode:  "u=rwx,g=rx,o=rx"
+    force: yes
+  with_items:
+  - "etcd"
+  - "etcdctl"
+
+- name: "Deploy service file"
+  template:
+    src:   etcd_systemd.j2
+    dest:  /etc/systemd/system/etcd.service
+    owner: root
+    group: root
+    mode:  "u=rw,g=r,o=r"
+  tags:
+  - service
+
+- name: "Stop service"
+  service:
+    name:    "{{ item }}"
+    state:   stopped
+    enabled: no
+  with_items:
+  - "{{ conf.services }}"
+  tags:
+  - service
+
+- name: "Delete configuration directories"
+  file:
+    dest:  "{{ item }}"
+    state: absent
+  with_items:
+  - "{{ conf.conf_dir }}"
+  - "{{ conf.root_dir }}"
+  tags:
+  - clear
+
+- name: "Create configuration directories"
+  file:
+    path:  "{{ item }}"
+    state: "directory"
+    owner: "{{ conf.username }}"
+    group: "{{ conf.groupname }}"
+  with_items:
+  - "{{ conf.conf_dir }}"
+  - "{{ conf.root_dir }}"
+  tags:
+  - conf
+
+- name: "Deploy configuration"
+  template:
+    src:   "{{ conf.conf_file }}.j2"
+    dest:  "{{ conf.conf_dir }}/{{ conf.conf_file }}"
+    owner: "{{ conf.username }}"
+    group: "{{ conf.groupname }}"
+    mode:  "u=rw,g=r,o=r"
+    force: yes
+  tags:
+  - conf
+
+- name: "Final state for service - {{ service_final.state }}"
+  service:
+    name:    "{{ item }}"
+    state:   "{{ service_final.state }}"
+    enabled: "{{ service_final.enabled }}"
+  with_items:
+  - "{{ conf.services }}"
+  tags:
+  - service
+
+- name: "Wait for ports - server ports"
+  wait_for:
+    host:    "{{ item.host }}"
+    port:    "{{ item.port }}"
+    state:   started
+    timeout: 5
+  with_items:
+  - host: "{{ bind_host }}"
+    port: "2379"
+  - host: "{{ bind_host }}"
+    port: "2380"
+  loop_control:
+    label: "{{ item.host }}:{{ item.port }}"
+  when:
+  - "service_final.state != 'stopped'"
+  tags:
+  - service
+  - verify
+
