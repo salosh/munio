@@ -15,15 +15,7 @@
 #    You should have received a copy of the GNU General Public License
 #    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
 #
-
----
-galaxy_info:
-  author: "Salo Shp"
-  description: ""
-  company: ""
-  license: license (GPLv3)
-  min_ansible_version: 2.4.3.0
-  galaxy_tags: []
-
-dependencies: []
+# Template requirements file
+# Order of columns
+# type, name, remote_path, local_path, sha256
 

@@ -1,0 +1,165 @@
+# https://jamielinux.com/docs/openssl-certificate-authority/sign-server-and-client-certificates.html
+[ ca ]
+default_ca = CA_NYLOX
+
+[ CA_NYLOX ]
+# Directory and file locations.
+{% if ca_type == 'root' %}
+dir               = {{ conf.root_dir }}
+policy            = policy_strict
+{% elif ca_type == 'intermediate' %}
+dir               = {{ intermediate_dir }}
+policy          = policy_loose
+{% else %}
+# Unknown ca_type '{{ ca_type }}'
+{% endif %}
+
+certs             = $dir/certs
+crl_dir           = $dir/crl
+new_certs_dir     = $dir/newcerts
+database          = $dir/index.txt
+serial            = $dir/serial
+RANDFILE          = $dir/private/.rand
+
+policy          = policy_loose
+
+# The root key and root certificate.
+private_key       = $dir/private/ca.key
+certificate       = $dir/certs/ca.crt
+
+# For certificate revocation lists.
+crlnumber         = $dir/crlnumber
+crl               = $dir/crl/ca.crl
+crl_extensions    = crl_ext
+default_crl_days  = 30
+
+# SHA-1 is deprecated, so use SHA-2 instead.
+default_md        = sha256
+
+name_opt          = ca_default
+cert_opt          = ca_default
+default_days      = 366
+preserve          = no
+
+# We’ll apply policy_strict for all root CA signatures, 
+# as the root CA is only being used to create intermediate CAs.
+[ policy_strict ]
+# The root CA should only sign intermediate certificates that match.
+# See the POLICY FORMAT section of `man ca`.
+countryName             = match
+stateOrProvinceName     = match
+organizationName        = match
+organizationalUnitName  = optional
+commonName              = supplied
+emailAddress            = optional
+
+# We’ll apply policy_loose for all intermediate CA signatures, 
+# as the intermediate CA is signing server and client certificates 
+# that may come from a variety of third-parties.
+[ policy_loose ]
+# Allow the intermediate CA to sign a more diverse range of certificates.
+# See the POLICY FORMAT section of the `ca` man page.
+countryName             = optional
+stateOrProvinceName     = optional
+localityName            = optional
+organizationName        = optional
+organizationalUnitName  = optional
+commonName              = supplied
+emailAddress            = optional
+
+# Options from the [ req ] section are applied when creating certificates 
+# or certificate signing requests.
+[ req ]
+# Options for the `req` tool (`man req`).
+default_bits        = 2048
+distinguished_name  = req_distinguished_name
+string_mask         = utf8only
+
+# SHA-1 is deprecated, so use SHA-2 instead.
+default_md          = sha256
+
+# Extension to add when the -x509 option is used.
+x509_extensions     = v3_ca
+
+
+# The [ req_distinguished_name ] section declares the information 
+# normally required in a certificate signing request. 
+# You can optionally specify some defaults.
+[ req_distinguished_name ]
+# See <https://en.wikipedia.org/wiki/Certificate_signing_request>.
+countryName                     = Country Name (2 letter code)
+stateOrProvinceName             = State or Province Name
+localityName                    = Locality Name
+0.organizationName              = Organization Name
+organizationalUnitName          = Organizational Unit Name
+commonName                      = Common Name
+emailAddress                    = Email Address
+
+# Optionally, specify some defaults.
+countryName_default             = IL
+stateOrProvinceName_default     = Israel
+localityName_default            =
+0.organizationName_default      = Nylox
+#organizationalUnitName_default =
+#emailAddress_default           =
+
+[ v3_ca ]
+# Extensions for a typical CA (`man x509v3_config`).
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid:always,issuer
+basicConstraints = critical, CA:true
+keyUsage = critical, digitalSignature, cRLSign, keyCertSign
+
+[ v3_intermediate_ca ]
+# Extensions for a typical intermediate CA (`man x509v3_config`).
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid:always,issuer
+basicConstraints = critical, CA:true, pathlen:0
+keyUsage = critical, digitalSignature, cRLSign, keyCertSign
+
+[ usr_cert ]
+# Extensions for client certificates (`man x509v3_config`).
+basicConstraints = CA:FALSE
+nsCertType = client, email
+nsComment = "OpenSSL Generated Client Certificate"
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid,issuer
+keyUsage = critical, nonRepudiation, digitalSignature, keyEncipherment
+extendedKeyUsage = clientAuth, emailProtection
+
+[ server_cert ]
+# Extensions for server certificates (`man x509v3_config`).
+basicConstraints = CA:FALSE
+nsCertType = server
+nsComment = "OpenSSL Generated Server Certificate"
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid,issuer:always
+keyUsage = critical, digitalSignature, keyEncipherment
+extendedKeyUsage = serverAuth
+crlDistributionPoints = URI:http://www.{{ domain_name }}/ca.crl
+
+[ consul_cert ]
+# http://russellsimpkins.blogspot.co.il/2015/10/consul-adding-tls-using-self-signed.html
+# https://www.mauras.ch/securing-consul.html#tls
+# https://www.digitalocean.com/community/tutorials/how-to-secure-consul-with-tls-encryption-on-ubuntu-14-04
+# https://github.com/hashicorp/consul/issues/2873
+# https://www.consul.io/docs/agent/encryption.html
+
+basicConstraints = CA:false
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid:always
+keyUsage = digitalSignature,keyEncipherment
+extendedKeyUsage = serverAuth,clientAuth
+crlDistributionPoints = URI:http://www.{{ domain_name }}/ca.crl
+
+[ crl_ext ]
+# Extension for CRLs (`man x509v3_config`).
+authorityKeyIdentifier=keyid:always
+
+[ ocsp ]
+# Extension for OCSP signing certificates (`man ocsp`).
+basicConstraints = CA:FALSE
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid,issuer
+keyUsage = critical, digitalSignature
+extendedKeyUsage = critical, OCSPSigning

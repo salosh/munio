@@ -99,6 +99,66 @@
   tags:
   - conf
 
+- name: "Slurp Consul key"
+  slurp:
+    src: "/var/lib/ca/intermediate/private/consul.key"
+  register: consul_key
+  delegate_to: "{{ groups['rootca-nodes'][0] }}"
+  run_once: true
+  tags:
+  - init
+
+- name: "Distribute Consul key to all nodes"
+  copy:
+    content: "{{ consul_key['content'] | b64decode }}"
+    dest:    "/etc/consul/ssl/consul.key"
+    owner: "{{ conf.username }}"
+    group: "{{ conf.groupname }}"
+    mode:    "u=r,g=,o="
+    force:   yes
+  tags:
+  - init
+
+- name: "Slurp CA cert"
+  slurp:
+    src: "/var/lib/ca/intermediate/certs/ca.crt"
+  register: ca_cert
+  delegate_to: "{{ groups['rootca-nodes'][0] }}"
+  run_once: true
+  tags:
+  - init
+
+- name: "Distribute CA cert to all nodes"
+  copy:
+    content: "{{ ca_cert['content'] | b64decode }}"
+    dest:    "/etc/consul/ssl/ca.crt"
+    owner: "{{ conf.username }}"
+    group: "{{ conf.groupname }}"
+    mode:    "u=r,g=,o="
+    force:   yes
+  tags:
+  - init
+
+- name: "Slurp Consul cert"
+  slurp:
+    src: "/var/lib/ca/intermediate/certs/consul.crt"
+  register: consul_cert
+  delegate_to: "{{ groups['rootca-nodes'][0] }}"
+  run_once: true
+  tags:
+  - init
+
+- name: "Distribute Consul key to all nodes"
+  copy:
+    content: "{{ consul_cert['content'] | b64decode }}"
+    dest:    "/etc/consul/ssl/consul.crt"
+    owner: "{{ conf.username }}"
+    group: "{{ conf.groupname }}"
+    mode:    "u=r,g=,o="
+    force:   yes
+  tags:
+  - init
+
 - name: "Deploy configuration"
   template:
     src:   "{{ conf.conf_file }}.j2"

@@ -17,10 +17,17 @@
 {#                                                                           #}
 {
   "watches": [
+{% for service in lb_services.keys() | list | sort %}
+    {
+      "type": "service",
+      "service": "{{ service }}",
+      "handler": "/usr/bin/cwu -l journal"
+    },
+{% endfor %}
     {
       "type": "checks",
       "state": "critical",
-      "handler": "/usr/bin/cwu -l log"
+      "handler": "/usr/bin/cwu -l journal"
     }
   ]
 }

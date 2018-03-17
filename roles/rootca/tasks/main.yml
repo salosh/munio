@@ -1,0 +1,200 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#
+#    Nylox is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Nylox is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+---
+- name: "Install packages"
+  vars:
+    packages: "{{ conf.packages }}"
+  include_tasks: "{{ role_path }}/../common/tasks/{{ ansible_pkg_mgr }}/package.yml"
+  tags:
+  - bin
+
+- name: "Delete directories"
+  file:
+    dest:  "{{ item }}"
+    state: absent
+  with_items:
+  - "{{ conf.root_dir }}"
+  tags:
+  - clear
+
+- name: "Create Root CA directories"
+  file:
+    path:  "{{ item }}"
+    state: "directory"
+    owner: "{{ conf.username }}"
+    group: "{{ conf.groupname }}"
+  with_items:
+  - "{{ conf.root_dir }}"
+  - "{{ conf.root_dir }}/certs"
+  - "{{ conf.root_dir }}/newcerts"
+  - "{{ conf.root_dir }}/private"
+  tags:
+  - conf
+
+- name: "Deploy Root CA configuration"
+  vars:
+    ca_type: "root"
+  template:
+    src:   "{{ ansible_pkg_mgr }}/openssl.cnf.j2"
+    dest:  "{{ conf.root_dir }}/openssl.cnf"
+    owner: "{{ conf.username }}"
+    group: "{{ conf.groupname }}"
+    mode:  "u=rw,g=r,o=r"
+    force: yes
+  tags:
+  - conf
+
+- name: "Deploy initial indexes"
+  copy:
+    content: "{{ item.content }}"
+    dest:    "{{ item.dest }}"
+  with_items:
+  - dest:    "{{ conf.root_dir }}/index.txt"
+    content: ""
+  - dest:    "{{ conf.root_dir }}/serial"
+    content: "5410"
+  - dest:    "{{ conf.root_dir }}/crlnumber"
+    content: "5410"
+  tags:
+  - conf
+
+- name: "Generate Root CA creds"
+  shell:
+    "{{ item }}"
+  with_items:
+  - "openssl genrsa -aes256 -passout file:/root/.ssh/id_rsa -out {{ conf.root_dir }}/private/ca.key 4096"
+  - "chmod 400 {{ conf.root_dir }}/private/ca.key"
+  - echo -e "\n\n\n\nNylox Certificate Authority\nNylox Root CA\n\n" | openssl req -config {{ conf.root_dir }}/openssl.cnf -key {{ conf.root_dir }}/private/ca.key -passin file:/root/.ssh/id_rsa -new -x509 -days 3650 -sha256 -extensions v3_ca -out {{ conf.root_dir }}/certs/ca.crt
+  - "chmod 444 {{ conf.root_dir }}/certs/ca.crt"
+  - "openssl x509 -noout -text -in {{ conf.root_dir }}/certs/ca.crt"
+  register: rootca_creds
+  tags:
+  - conf
+
+- name: "Debug Root CA creds creation process"
+  debug:
+    var: rootca_creds.results[-1].stdout_lines
+
+- set_fact:
+    intermediate_dir: "{{ conf.root_dir }}/intermediate"
+
+- name: "Create Root CA directories"
+  file:
+    path:  "{{ item }}"
+    state: "directory"
+    owner: "{{ conf.username }}"
+    group: "{{ conf.groupname }}"
+  with_items:
+  - "{{ intermediate_dir }}"
+  - "{{ intermediate_dir }}/certs"
+  - "{{ intermediate_dir }}/crl"
+  - "{{ intermediate_dir }}/csr"
+  - "{{ intermediate_dir }}/newcerts"
+  - "{{ intermediate_dir }}/private"
+  tags:
+  - conf
+
+- name: "Deploy initial indexes"
+  copy:
+    content: "{{ item.content }}"
+    dest:    "{{ item.dest }}"
+  with_items:
+  - dest:    "{{ intermediate_dir }}/index.txt"
+    content: ""
+  - dest:    "{{ intermediate_dir }}/serial"
+    content: "5410"
+  - dest:    "{{ intermediate_dir }}/crlnumber"
+    content: "5410"
+  tags:
+  - conf
+
+- name: "Deploy Intermediate CA configuration"
+  vars:
+    ca_type: "intermediate"
+  template:
+    src:   "{{ ansible_pkg_mgr }}/openssl.cnf.j2"
+    dest:  "{{ intermediate_dir }}/openssl.cnf"
+    owner: "{{ conf.username }}"
+    group: "{{ conf.groupname }}"
+    mode:  "u=rw,g=r,o=r"
+    force: yes
+  tags:
+  - conf
+
+# TODO FIXME root and inter should not use the same key file
+- name: "Generate Intermediate CA creds"
+  shell:
+    "{{ item }}"
+  with_items:
+  - openssl genrsa -aes256 -passout file:/root/.ssh/id_rsa -out {{ intermediate_dir }}/private/ca.key 4096
+  - chmod 400 {{ intermediate_dir }}/private/ca.key
+  - echo -e "\n\n\n\nNylox Certificate Authority\nNylox Intermediate CA\n\n" | openssl req -config {{ intermediate_dir }}/openssl.cnf -new -sha256 -key {{ intermediate_dir }}/private/ca.key -passin file:/root/.ssh/id_rsa -out {{ intermediate_dir }}/csr/intermediate.csr
+  - echo -e "y\ny\n" | openssl ca -config {{ conf.root_dir }}/openssl.cnf -extensions v3_intermediate_ca -days 1825 -notext -md sha256 -passin file:/root/.ssh/id_rsa -in {{ intermediate_dir }}/csr/intermediate.csr -out {{ intermediate_dir }}/certs/ca.crt
+  - chmod 444 {{ intermediate_dir }}/certs/ca.crt
+  - openssl x509 -noout -text -in {{ intermediate_dir }}/certs/ca.crt
+  - openssl verify -CAfile {{ conf.root_dir }}/certs/ca.crt {{ intermediate_dir }}/certs/ca.crt
+  register: interca_creds
+  tags:
+  - conf
+
+- name: "Debug Intermediate CA creds creation process"
+  debug:
+    var: interca_creds.results[-2].stdout_lines
+
+- name: "Verify creds creation process"
+  debug:
+    var: interca_creds.results[-1].stdout_lines
+
+- name: "Generate certificates chain file"
+  shell:
+    "{{ item }}"
+  with_items:
+  - cat {{ intermediate_dir }}/certs/ca.crt {{ conf.root_dir }}/certs/ca.crt > {{ intermediate_dir }}/certs/ca-chain.crt
+  - chmod 444 {{ intermediate_dir }}/certs/ca-chain.crt
+  tags:
+  - conf
+
+- name: "Generate Intermediate CRLs"
+  shell:
+    openssl ca -config {{ intermediate_dir }}/openssl.cnf -gencrl -passin file:/root/.ssh/id_rsa -out {{ intermediate_dir }}/crl/ca.crl
+  register: service_server_certs
+  tags:
+  - conf
+# Debug
+# openssl crl -in {{ intermediate_dir }}/crl/ca.crl -noout -text
+
+- name: "Generate Nylox cluster service certificates"
+  include_tasks: "./sign.yml"
+  with_items:
+  - "{{ lb_services.keys() | list | sort | unique }}"
+  loop_control:
+    loop_var: "what_to_sign"
+    label: "Creating certificates for '{{ what_to_sign }}'"
+
+- name: "Generate Consul service certificates"
+  vars:
+    what_to_sign: "consul"
+    extension:    "consul_cert"
+    subject:      "*.{{ domain_name }}"
+  include_tasks: "./sign.yml"
+
+# TODO FIXME add cert to OS
+# https://bbs.archlinux.org/viewtopic.php?id=166493
+#sudo cp path/to/goagent/local/CA.crt /usr/local/share/ca-certificates/goagent.crt
+#sudo update-ca-certificates

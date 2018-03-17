@@ -1,4 +1,4 @@
 source_image: "xenial-server-cloudimg-amd64-disk1.img"
 flavor: "s1.large"
-#ansible_user: "toor"
+sshauth_remote_user: ubuntu
 
