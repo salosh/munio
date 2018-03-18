@@ -17,13 +17,11 @@
 #
 
 ---
-galaxy_info:
-  author: "Salo Shp"
-  description: ""
-  company: ""
-  license: license (GPLv3)
-  min_ansible_version: 2.4.3.0
-  galaxy_tags: []
-
-dependencies: []
+- hosts: rootca-nodes
+#  gather_facts: no
+#  max_fail_percentage: 0
+#  serial: 10
+#  no_log: True
+  roles:
+  - { role: rootca }
 

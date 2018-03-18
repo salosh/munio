@@ -17,13 +17,30 @@
 #
 
 ---
-galaxy_info:
-  author: "Salo Shp"
-  description: ""
-  company: ""
-  license: license (GPLv3)
-  min_ansible_version: 2.4.3.0
-  galaxy_tags: []
+pacman:
+  packages:
+  - openssl
+  services: []
+  username:  "root"
+  groupname: "root"
+  root_dir: "/var/lib/ca"
+apt:
+  packages: []
+  services: []
+  username:  "default"
+  groupname: "default"
 
-dependencies: []
+yum:
+  packages: []
+  services: []
+  username:  "default"
+  groupname: "default"
+
+conf: "{{ vars[ansible_pkg_mgr] | default({}) }}"
+#bind_host: "127.0.0.1"
+#bind_port: "12345"
+
+service_final:
+  state:   "restarted"
+  enabled: "yes"
 

@@ -246,13 +246,23 @@
   - vault_debug_mode is defined
   - vault_debug_mode | bool  
 
-- name: "Enable password authentication"
+- name: "Enable backends"
   environment:
     VAULT_ADDR: "http://{{ bind_host }}:{{ bind_port }}"
   shell:
-    "vault auth enable userpass"
+    "{{ item }}"
+  with_items:
+  - "vault auth enable userpass"
+  - "vault secrets enable pki"
+  - "vault secrets tune -max-lease-ttl=8760h pki"
   delegate_to: "{{ ansible_play_hosts[0] }}"
   run_once: true
   tags:
   - init
+
+#- name: "Configure Vault-based Root CA"
+#  import_tasks: "./rootca.yml"
+
+- name: "Integrate with external Root CA"
+  import_tasks: "./intermediate.yml"
 

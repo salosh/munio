@@ -24,6 +24,8 @@
     is_primary: true
     bootstrap_expect: 1
     consul_config_mode: server
+    encrypt_consul: true
+    consul_encryption_key: "EG7Lq2jBbv13QWpuaAwI0g=="
   roles:
   - { role: consul }
 
@@ -34,6 +36,8 @@
   vars:
     is_primary: false
     consul_config_mode: server
+    encrypt_consul: true
+    consul_encryption_key: "EG7Lq2jBbv13QWpuaAwI0g=="
   roles:
    - consul
 

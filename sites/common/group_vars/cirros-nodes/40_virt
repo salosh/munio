@@ -1,4 +1,4 @@
-source_image: "cirros-0.3.5-x86_64-disk.img"
+source_image: "cirros-0.4.0-x86_64-disk.img"
+sshauth_remote_user: cirros
 #flavor: ""
-#ansible_user: "cirros"
 

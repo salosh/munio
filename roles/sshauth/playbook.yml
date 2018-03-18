@@ -18,7 +18,8 @@
 
 ---
 - hosts: all
-#  gather_facts: no
+  max_fail_percentage: 0
+  gather_facts: no
 #  no_log: True
   roles:
   - { role: sshauth }

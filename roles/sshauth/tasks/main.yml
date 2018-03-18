@@ -17,49 +17,16 @@
 #
 
 ---
-- name: "Remove existing ip SSH signature"
+- name: "Verify that Ansible run-time dependencies are installed and functioning"
+  remote_user: "{{ sshauth_remote_user }}"
   shell:
-    grep "{{ ips[cnc_net][item].ip }}" ~/.ssh/known_hosts && ssh-keygen -f ~/.ssh/known_hosts -R {{ ips[cnc_net][item].ip }}
-  with_items:
-  - "{{ groups['all'] }}"
-  delegate_to: "localhost"
-  register: remove_ssh_sig
-  failed_when: false
-  changed_when: "remove_ssh_sig.rc != 1"
-  run_once: true
-  tags:
-  - clear
-  - auth
-
-- name: "Remove existing name SSH signature"
-  shell:
-    grep "{{ item }}" ~/.ssh/known_hosts && ssh-keygen -f ~/.ssh/known_hosts -R {{ item }}
-  with_items:
-  - "{{ groups['all'] }}"
-  delegate_to: "localhost"
-  register: remove_ssh_sig
-  failed_when: false
-  changed_when: "remove_ssh_sig.rc != 1"
-  run_once: true
-  tags:
-  - clear
-  - auth
-
-- set_fact:
-    is_reachable: "{{ lookup('pipe', 'ssh -o PasswordAuthentication=no -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ' ~ inventory_hostname ~ ' uptime') }}"
-  delegate_to: "localhost"
-  failed_when: false
-  ignore_errors: true
-  tags:
-  - conf
-
-- set_fact:
-    ansible_ssh_pass: "{{ sshauth_remote_pass }}"
-    ansible_sudo_pass: "{{ sshauth_remote_pass }}"
-  when:
-  - "is_reachable is not defined"
-  tags:
-  - conf 
+    /bin/true
+  changed_when: false
+  register: result
+  until: result | succeeded
+  ignore_errors: yes
+  retries: 54
+  delay: 10
 
 - name: "Deploy public key to user '{{ sshauth_remote_user }}'"
   remote_user: "{{ sshauth_remote_user }}"
@@ -67,8 +34,6 @@
     user:      "{{ sshauth_remote_user }}"
     key:       "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
     exclusive: "{{ sshauth_exclusive_key }}"
-  when:
-  - "is_reachable is not defined"
   tags:
   - conf 
   - auth
@@ -83,23 +48,36 @@
     group: root
   with_items:
   - 00_sshauth
-  when:
-  - "is_reachable is not defined"
   tags:
   - conf 
   - auth
 
-- name: "Deploy public key to user root"
+- name: "Deploy 'local public key' to remote 'root'"
   remote_user: "{{ sshauth_remote_user }}"
   become: yes
   authorized_key:
     user:      "root"
     key:       "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
     exclusive: "{{ sshauth_exclusive_key }}"
-  when:
-  - "is_reachable is not defined"
   tags:
   - conf 
   - auth
 
+- name: "Slurp remote 'root public key'"
+  slurp:
+    src: "/root/.ssh/id_rsa.pub"
+  register: root_pubkey
+  tags:
+  - conf
+  - auth
+
+- name: "Deploy remote 'root public key' to remote 'root'"
+  remote_user: "{{ sshauth_remote_user }}"
+  become: yes
+  authorized_key:
+    user: "root"
+    key:  "{{ root_pubkey['content'] | b64decode }}"
+  tags:
+  - conf
+  - auth
 

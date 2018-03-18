@@ -54,8 +54,12 @@ function cwu_watch_process() {
 function cwu_trace_mode() {
   while read line
   do
-    if [ "x${CWU_TRACE_MODE}" == "xlog" ]; then
+    if [ "x${CWU_TRACE_MODE}" == "xjournal" ]; then
       logger -t nylox "${line}"
+    elif [ "x${CWU_TRACE_MODE}" == "xlog" ]; then
+      echo "${line}" > /var/log/consul/nylox__$(cwu_pdate).json
+    elif [ "x${CWU_TRACE_MODE}" == "xsocket" ]; then
+      echo -e "${line}\n" | nc -w0 -uU /var/run/nylox-consul-monitor.sock
     elif [ "x${CWU_TRACE_MODE}" == "xjson" ]; then
 #    logger -t nylox "$(echo ${line} | python -m json.tool)"
       echo "${line}" | /usr/bin/python -c 'import json; import sys; print(json.loads(sys.stdin.readline()))'

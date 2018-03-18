@@ -6,12 +6,15 @@
 127.0.0.1       localhost.localdomain   localhost
 ::1             localhost.localdomain   localhost
 
-{% for net in nets.keys() | sort %}
+{% if nets is defined and nets.keys() | length > 0 %}
+{%   for net in nets.keys() | sort %}
 # Net '{{ net }}' hosts
-{%   for key in ips[net].keys() | sort %}
-{%     if 'ip' in ips[net][key].keys() and key != 'localhost' %}
-{% if net != cnc_net %}# {% endif %}{{ ips[net][key].ip }}	{{ key }}.{{ fqdn }}	{{ key }}
-{%     endif %}
+{%     for key in ips[net].keys() | sort %}
+{%       if ips[net][key] is mapping and 'ip' in ips[net][key].keys() and key != 'localhost' %}
+{%         if net != cnc_net %}# {% endif %}{{ ips[net][key].ip }}	{{ key }}.{{ fqdn }}	{{ key }}
+{%       endif %}
+{%     endfor %}
 {%   endfor %}
-{% endfor %}
-
+{% else %}
+127.0.0.1       {{ inventory_hostname }}.{{ domain_name}}   {{ inventory_hostname }}
+{% endif %}

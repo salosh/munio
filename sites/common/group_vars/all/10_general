@@ -32,6 +32,7 @@ dir_reqs: "/srv/nylox/reqs"
 #site_id: "default"
 rack_id: 5
 rack_type: v
+domain_suffix: "nylox.local"
 
 default_locale: "en_US.UTF-8"
 
