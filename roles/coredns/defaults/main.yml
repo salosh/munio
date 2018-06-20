@@ -17,30 +17,34 @@
 #
 
 ---
-conf:
-  services:
-  - etcd
-  username: "etcd"
-  groupname: "etcd"
-  root_dir: /var/lib/etcd
-  conf_file: conf.yml
-  conf_dir: /etc/etcd
-  work_dir: /usr/share/etcd
+packages_apt: []
+packages_yum: []
+packages_pacman: []
 
-etcd_version: "3.3.8"
-etcd_download_uri: "https://github.com/coreos/etcd/releases/download/v{{ etcd_version }}"
+conf:
+  packages: "{{ vars['packages_' ~ ansible_pkg_mgr] }}"
+  services:
+  - coredns
+  username: "coredns"
+  groupname: "coredns"
+  root_dir: "/var/lib/coredns"
+  conf_dir: /etc/coredns
+  work_dir: "/usr/share/coredns"
+  log_dir: "/var/log/coredns"
+
+coredns_version: "1.1.4"
+coredns_download_uri: "https://github.com/coredns/coredns/releases/download/v{{ coredns_version }}"
 
 requirements:
   binary:
     type:        "uri"
-    name:        "etcd-v{{ etcd_version }}-linux-amd64.tar.gz"
-    remote_path: "{{ etcd_download_uri }}/etcd-v{{ etcd_version }}-linux-amd64.tar.gz"
-    local_path:  "{{ dir_reqs }}/etcd-v{{ etcd_version }}-linux-amd64.tar.gz"
-    sha256:      "a1e9d30312f712f714be3d09b242b901a531dd9472351425c1e712ba740012a4"
-
+    name:        "coredns_{{ coredns_version }}_linux_amd64.tgz"
+    remote_path: "{{ coredns_download_uri }}/coredns_{{ coredns_version }}_linux_amd64.tgz"
+    local_path:  "{{ dir_reqs }}/coredns_{{ coredns_version }}_linux_amd64.tgz"
+    sha256:      "7d688d6f56cc17dd76bbbf2521afd165ac09f261f549df1318b8babb8f100890"
 
 bind_host: "{{ ips[cnc_net][inventory_hostname].ip }}"
-#bind_port: "2379,2380"
+bind_port: "5453"
 
 service_final:
   state:   "restarted"

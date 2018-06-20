@@ -1,0 +1,44 @@
+[Unit]
+Description=Todero - distributed pubsub based service discovery
+Documentation=https://munio.io/todero
+Wants=network.target
+After=network.target
+
+[Service]
+Type=simple
+PIDFile=/run/todero.pid
+
+PrivateTmp=true
+WorkingDirectory={{ conf.root_dir }}
+
+User=root
+Group=root
+
+ExecStart=/usr/bin/todero \
+            -conf {{ conf.root_dir }} \
+            -pop metrics        ipc://todero-metrics \
+            -pop metricselastic ipc://todero-metrics \
+{% if inventory_hostname in groups['etcd-nodes'] %}
+            -pop discovery      "ipc://todero-metrics|tcp://{{ bind_host }}:12379/?mode=connect" \
+            -pop etcd           "tcp://{{ bind_host }}:12379/?mode=bind" \
+{% else %}
+            -pop discovery      "ipc://todero-metrics|tcp://etcd.service.lb:12379/?mode=connect" \
+{% endif %}
+            -pop journal        ipc://todero-journal
+
+
+LimitNOFILE=65536
+LimitNPROC=4096
+LimitAS=infinity
+LimitFSIZE=infinity
+
+Restart=on-failure
+RestartSec=5
+KillMode=process
+SendSIGKILL=no
+TimeoutStopSec=0
+SuccessExitStatus=0
+
+[Install]
+WantedBy=multi-user.target
+

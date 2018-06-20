@@ -1,0 +1,5 @@
+  - type: systemctl
+    name: "{{ check.name | default(todero_service_name) }}"
+    title: "Service '{{ todero_service_name }}' systemctl health-check"
+    interval: {{ check.interval | default(30) | int }}
+

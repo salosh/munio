@@ -17,7 +17,11 @@
 #
 
 ---
-- name: "HelloWorld"
-  debug:
-    msg: "Is the future of our race not worth a single human life?"
+- hosts: todero-nodes:infra01
+#  gather_facts: no
+#  max_fail_percentage: 0
+#  serial: 10
+#  no_log: True
+  roles:
+  - { role: todero }
 

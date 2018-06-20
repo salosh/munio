@@ -12,21 +12,22 @@ wal-dir: {{ conf.root_dir }}/wal
 # Number of committed transactions to trigger a snapshot to disk.
 snapshot-count: 10000
 
+# --election-timeout should be at least as 5 times as --heartbeat-interval. See 'etcd --help'.
 # Time (in milliseconds) of a heartbeat interval.
-heartbeat-interval: 100
+heartbeat-interval: 269
 
 # Time (in milliseconds) for an election to timeout.
-election-timeout: 1000
+election-timeout: 1500
 
 # Raise alarms when backend size exceeds the given quota. 0 means use the
 # default quota.
 quota-backend-bytes: 0
 
 # List of comma separated URLs to listen on for peer traffic.
-listen-peer-urls: http://{{ bind_host }}:2380
+listen-peer-urls: https://{{ bind_host }}:2380
 
 # List of comma separated URLs to listen on for client traffic.
-listen-client-urls: http://127.0.0.1:2379,http://{{ bind_host }}:2379
+listen-client-urls: http://127.0.0.1:2379,https://{{ bind_host }}:2379
 
 # Maximum number of snapshot files to retain (0 is unlimited).
 max-snapshots: 5
@@ -39,11 +40,11 @@ cors:
 
 # List of this member's peer URLs to advertise to the rest of the cluster.
 # The URLs needed to be a comma-separated list.
-initial-advertise-peer-urls: http://{{ bind_host }}:2380
+initial-advertise-peer-urls: https://{{ bind_host }}:2380
 
 # List of this member's client URLs to advertise to the public.
 # The URLs needed to be a comma-separated list.
-advertise-client-urls: http://{{ inventory_hostname }}:2379,http://{{ bind_host }}:2379
+advertise-client-urls: https://{{ bind_host }}:2379
 
 # Discovery URL used to bootstrap the cluster.
 discovery:
@@ -60,12 +61,12 @@ discovery-srv:
 # Initial cluster configuration for bootstrapping.
 {% set etcd_initial_cluster = [] %}
 {% for node in groups['etcd-nodes'] %}
-{%   set tmp = etcd_initial_cluster.append(node ~ '=http://' ~ node ~ ':2380') %}
+{%   set tmp = etcd_initial_cluster.append(node ~ '=https://' ~ node ~'.'~ domain_name ~ ':2380') %}
 {% endfor %}
 initial-cluster: {{ etcd_initial_cluster | join(',') }}
 
 # Initial cluster token for the etcd cluster during bootstrap.
-initial-cluster-token: 'nylox-etcd-cluster'
+initial-cluster-token: 'munio-etcd-cluster'
 
 # Initial cluster state ('new' or 'existing').
 initial-cluster-state: 'new'
@@ -99,38 +100,38 @@ proxy-read-timeout: 0
 
 client-transport-security:
   # DEPRECATED: Path to the client server TLS CA file.
-  ca-file:
+  ca-file: /etc/etcd/ca.crt
 
   # Path to the client server TLS cert file.
-  cert-file:
+  cert-file: /etc/etcd/etcd.crt
 
   # Path to the client server TLS key file.
-  key-file:
+  key-file: /etc/etcd/etcd.key
 
   # Enable client cert authentication.
-  client-cert-auth: false
+  client-cert-auth: True
 
   # Path to the client server TLS trusted CA cert file.
-  trusted-ca-file:
+  trusted-ca-file: /etc/etcd/ca.crt
 
   # Client TLS using generated certificates
   auto-tls: true
 
 peer-transport-security:
   # DEPRECATED: Path to the peer server TLS CA file.
-  ca-file:
+  ca-file: /etc/etcd/ca.crt
 
   # Path to the peer server TLS cert file.
-  cert-file:
+  cert-file: /etc/etcd/etcd-peer.crt
 
   # Path to the peer server TLS key file.
-  key-file:
+  key-file: /etc/etcd/etcd-peer.key
 
   # Enable peer client cert authentication.
-  peer-client-cert-auth: false
+  peer-client-cert-auth: true
 
   # Path to the peer server TLS trusted CA cert file.
-  trusted-ca-file:
+  trusted-ca-file: /etc/etcd/ca.crt
 
   # Peer TLS using generated certificates.
   auto-tls: true

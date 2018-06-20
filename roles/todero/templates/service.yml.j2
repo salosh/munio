@@ -1,0 +1,62 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Munio. <https://github.com/salosh/munio.git>
+#
+#    Munio is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Munio is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Munio.  If not, see <http://www.gnu.org/licenses/>.
+#
+{% set svc = lb_services[iteritem] | default({}) %}
+{% set todero_service_name = iteritem.replace('_','') %}
+service:
+  "name": "{{ todero_service_name }}"
+{% set tagz = [] %}
+{% set tmp = tagz.append('"' ~ site_name ~ '"') %}
+{% set tmp = tagz.append('"' ~ rack_name ~ '"') %}
+{% set tmp = tagz.append('"' ~ inventory_hostname ~ '"') %}
+{% if 'tags' in svc.keys() %}
+{%   for tag in svc.tags | list | sort %}
+{%     set tmp = tagz.append('"' ~ tag ~ '"') %}
+{%   endfor %}
+{% endif %}
+  "tags": [{{ tagz | unique | join(',') }}]
+{% if svc.address is defined %}
+  "address":
+{%   if svc.address is string %}
+  - "ip": "{{ svc.address }}"
+{%   elif svc.address is iterable %}
+{%     for address in svc.address %}
+  - "ip": "{{ address.ip | default(address | string) }}"
+{%       if 'host' in address %}
+    "host": "{{ address.host }}"
+{%       endif %}
+{%     endfor %}
+{%   endif %}
+{% endif %}
+{% if svc.checks is defined and svc.checks | length > 0 %}
+  "checks":
+{%  for check in svc.checks %}
+{%    if 'type' in check -%}{% set check_type = check.type -%}
+{%    elif 'port' in check %}{% set check_type = 'socket' -%}
+{%    elif 'exec' in check %}{% set check_type = 'exec' -%}
+{%    elif 'name' in check %}{% set check_type = 'systemctl' -%}
+{%    elif 'services' in check %}{% set check_type = 'dependency' -%}
+{%    endif %}
+{%    include 'check_' ~ check_type ~ '.j2' %}
+{%  endfor %}
+{% else %}
+  "checks": []
+{% endif %}
+  "dns_ttl": {{ svc.dns_ttl | default(30) | replace('s', '') | int }}
+{% if svc.unpublish_failures is defined and svc.unpublish_failures | bool %}
+  "unpublish_failures": true
+{% endif %}

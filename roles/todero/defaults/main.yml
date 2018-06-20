@@ -1,0 +1,84 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Munio. <https://github.com/salosh/munio.git>
+#
+#    Munio is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Munio is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Munio.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+---
+pacman:
+  packages:
+  - gcc
+  - python-pip
+  - python-systemd
+  services:
+  - todero
+  username:  "root"
+  groupname: "root"
+  files:
+  - name: "config.yml"
+    path: "/etc/todero"
+  root_dir:  "/var/lib/todero"
+  conf_dir:  "/etc/todero"
+  log_dir:  "/var/log/todero"
+
+apt:
+  packages: []
+  services: []
+  username:  "default"
+  groupname: "default"
+  files:
+  - name: "default.yml"
+    path: "/tmp"
+  root_dir:  "/tmp/default"
+
+yum:
+  packages: []
+  services: []
+  username:  "default"
+  groupname: "default"
+  files:
+  - name: "default.yml"
+    path: "/tmp"
+  root_dir:  "/tmp/default"
+
+pip_packages:
+  - pip
+  - zmq
+  - psutil
+  - python-etcd
+  - coloredlogs
+  - pyyaml
+  - elasticsearch
+#  - pickle
+
+todero_version: "0.0.1"
+todero_download_uri: "https://munio.io/downloads/todero"
+
+requirements:
+  binary:
+    type:        "uri"
+    name:        "todero-{{ todero_version }}.tar.gz"
+    remote_path: "{{ todero_download_uri }}/todero-{{ todero_version }}.tar.gz"
+    local_path:  "{{ dir_reqs }}/todero-{{ todero_version }}.tar.gz"
+    sha256:      "dd004e9ceab6c6ac31496526e4b41c27413ba181a04aa4e9dc2b50cf345a44c8"
+
+conf: "{{ vars[ansible_pkg_mgr] | default({}) }}"
+bind_host: "{{ ips[cnc_net][inventory_hostname].ip }}"
+#bind_port: "12345"
+
+service_final:
+  state:   "restarted"
+  enabled: "yes"
+

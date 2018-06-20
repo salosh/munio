@@ -1,0 +1,157 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Munio. <https://github.com/salosh/munio.git>
+#
+#    Munio is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Munio is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Munio.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+---
+- name: "Install packages"
+  vars:
+    packages: "{{ conf.packages }}"
+  include_tasks: "{{ role_path }}/../common/tasks/{{ ansible_pkg_mgr }}/package.yml"
+  tags:
+  - bin
+
+- name: "Download requirements"
+  include_tasks: "{{ role_path }}/../common/tasks/requirements.yml"
+  when:
+  - "connectivity_mode == 'online'"
+  tags:
+  - reqs
+
+- name: "Install PIP packages"
+  pip:
+    name: "{{ item }}"
+  loop:
+  - "{{ pip_packages }}"
+
+- name: "Delete configuration directories"
+  file:
+    dest:  "{{ item }}"
+    state: absent
+  loop:
+  - "{{ conf.conf_dir }}"
+  - "{{ conf.root_dir }}"
+  - "{{ conf.log_dir }}"
+  tags:
+  - clear
+
+- name: "Create configuration directories"
+  file:
+    path:  "{{ item }}"
+    state: "directory"
+    owner: "{{ conf.username }}"
+    group: "{{ conf.groupname }}"
+  with_items:
+  - "{{ conf.conf_dir }}"
+  - "{{ conf.root_dir }}"
+  - "{{ conf.log_dir }}"
+  tags:
+  - conf
+
+- name: "Extract binary '{{ requirements.binary.name }}'"
+  unarchive:
+    src:  "{{ requirements.binary.local_path }}"
+    dest: "/usr/share"
+    owner: "{{ conf.username }}"
+    group: "{{ conf.username }}"
+    mode: "u=rwx,g=rx,o=rx"
+  tags:
+  - bin
+
+- name: "Create binary links"
+  file:
+    src: "../share/todero/{{ item }}.py"
+    dest: "/usr/bin/{{ item }}"
+    state: link
+    owner: "{{ conf.username }}"
+    group: "{{ conf.username }}"
+    mode:  "u=rwx,g=rx,o=rx"
+    force: yes
+  loop:
+  - "todero"
+
+- name: "Deploy service file"
+  template:
+    src:   todero_systemd.j2
+    dest:  /etc/systemd/system/todero.service
+    owner: root
+    group: root
+    mode:  "u=rw,g=r,o=r"
+  tags:
+  - service
+
+- name: "Deploy daemon additional configuration"
+  template:
+    src:   "service.yml.j2"
+    dest:  "{{ conf.root_dir }}/svc_{{ iteritem }}.yml"
+    owner: "{{ conf.username }}"
+    group: "{{ conf.groupname }}"
+    mode:  "u=rw,g=r,o=r"
+    force: yes
+  with_items:
+  - "{{ lb_services.keys() | sort }}"
+  loop_control:
+    loop_var: "iteritem"
+  when:
+  - lb_services[iteritem].apply_to | default('') in group_names
+  tags:
+  - conf
+
+- name: "Stop service"
+  service:
+    name:    "{{ item }}"
+    state:   stopped
+    enabled: no
+  with_items: "{{ conf.services }}"
+  tags:
+  - service
+
+- name: "Deploy configuration"
+  template:
+    src:   "{{ item }}.j2"
+    dest:  "{{ conf.conf_dir }}/{{ item }}"
+    owner: "{{ conf.username }}"
+    group: "{{ conf.groupname }}"
+    mode: "u=rwx,g=rwx,o=rx"
+    force: yes
+  loop:
+  - "config.yml"
+  tags:
+  - conf
+
+- name: "Final state for service - {{ service_final.state }}"
+  service:
+    name:    "{{ item }}"
+    state:   "{{ service_final.state }}"
+    enabled: "{{ service_final.enabled }}"
+  loop: "{{ conf.services }}"
+  tags:
+  - service
+
+- name: "Wait for service to start"
+  wait_for:
+    path: "{{ conf.root_dir }}/{{ item }}"
+    state: present
+    delay: 10
+  loop:
+  - todero-metrics
+  - todero-journal
+  when:
+  - "service_final.state != 'stopped'"
+  tags:
+  - service
+  - verify
+
