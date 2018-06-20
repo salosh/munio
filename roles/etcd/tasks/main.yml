@@ -1,19 +1,19 @@
 # Author: Salo Shp <saloshp@gmail.com>
 #
-#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#    This file is part of Munio. <https://github.com/salosh/munio.git>
 #
-#    Nylox is free software: you can redistribute it and/or modify
+#    Munio is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
 #    the Free Software Foundation, either version 3 of the License, or
 #    (at your option) any later version.
 #
-#    Nylox is distributed in the hope that it will be useful,
+#    Munio is distributed in the hope that it will be useful,
 #    but WITHOUT ANY WARRANTY; without even the implied warranty of
 #    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #    GNU General Public License for more details.
 #
 #    You should have received a copy of the GNU General Public License
-#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#    along with Munio.  If not, see <http://www.gnu.org/licenses/>.
 #
 
 ---
@@ -131,6 +131,152 @@
   tags:
   - conf
 
+- name: "Create intermediate CA"
+  vars:
+    intermediate_ca_name: "etcd"
+    intermediate_dir: "/var/lib/ca/etcd"
+    encrypt_creds: false
+  include_tasks: "{{ role_path }}/../rootca/tasks/intermediate.yml"
+  delegate_to: "{{ groups['rootca-nodes'][0] }}"
+  run_once: true
+  tags:
+  - init
+
+- name: "Generate Etcd TLS certificates"
+  vars:
+    what_to_sign: "{{ item }}"
+    extension:    "combined_cert"
+    subject:      "*.{{ domain_name }}"
+    intermediate_dir: "/var/lib/ca/etcd"
+  include_tasks: "{{ role_path }}/../rootca/tasks/sign.yml"
+  with_items:
+  - "etcd"
+  - "etcd-peer"
+  delegate_to: "{{ groups['rootca-nodes'][0] }}"
+  run_once: true
+  tags:
+  - init
+
+- name: "Slurp CA certificate"
+  slurp:
+    src: "/var/lib/ca/etcd/certs/ca.crt"
+  register: ca_crt
+  delegate_to: "{{ groups['rootca-nodes'][0] }}"
+  run_once: true
+  tags:
+  - init
+
+- name: "Distribute CA certificate to all nodes"
+  copy:
+    content: "{{ ca_crt['content'] | b64decode }}"
+    dest:    "/etc/etcd/ca.crt"
+    owner:   "{{ conf.username }}"
+    group:   "{{ conf.groupname }}"
+    mode:    "u=r,g=r,o="
+    force:   yes
+  tags:
+  - init
+
+- name: "Slurp CA public key"
+  slurp:
+    src: "/var/lib/ca/etcd/private/ca.pub"
+  register: ca_key
+  delegate_to: "{{ groups['rootca-nodes'][0] }}"
+  run_once: true
+  tags:
+  - init
+
+- name: "Distribute CA public key to all nodes"
+  copy:
+    content: "{{ ca_key['content'] | b64decode }}"
+    dest:    "/etc/etcd/ca.pub"
+    owner:   "{{ conf.username }}"
+    group:   "{{ conf.groupname }}"
+    mode:    "u=r,g=r,o="
+    force:   yes
+  tags:
+  - init
+
+- name: "Slurp Etcd certificate"
+  slurp:
+    src: "/var/lib/ca/etcd/certs/etcd.crt"
+  register: etcd_crt
+  delegate_to: "{{ groups['rootca-nodes'][0] }}"
+  run_once: true
+  tags:
+  - init
+
+- name: "Distribute Etcd certificate to all nodes"
+  copy:
+    content: "{{ etcd_crt['content'] | b64decode }}"
+    dest:    "/etc/etcd/etcd.crt"
+    owner:   "{{ conf.username }}"
+    group:   "{{ conf.groupname }}"
+    mode:    "u=r,g=r,o="
+    force:   yes
+  tags:
+  - init
+
+- name: "Slurp Etcd key"
+  slurp:
+    src: "/var/lib/ca/etcd/private/etcd.key"
+  register: etcd_key
+  delegate_to: "{{ groups['rootca-nodes'][0] }}"
+  run_once: true
+  tags:
+  - init
+
+- name: "Distribute Etcd key to all nodes"
+  copy:
+    content: "{{ etcd_key['content'] | b64decode }}"
+    dest:    "/etc/etcd/etcd.key"
+    owner:   "{{ conf.username }}"
+    group:   "{{ conf.groupname }}"
+    mode:    "u=r,g=r,o="
+    force:   yes
+  tags:
+  - init
+
+- name: "Slurp Etcd peer certificate"
+  slurp:
+    src: "/var/lib/ca/etcd/certs/etcd-peer.crt"
+  register: etcd_peer_crt
+  delegate_to: "{{ groups['rootca-nodes'][0] }}"
+  run_once: true
+  tags:
+  - init
+
+- name: "Distribute Etcd peer certificate to all nodes"
+  copy:
+    content: "{{ etcd_peer_crt['content'] | b64decode }}"
+    dest:    "/etc/etcd/etcd-peer.crt"
+    owner:   "{{ conf.username }}"
+    group:   "{{ conf.groupname }}"
+    mode:    "u=r,g=r,o="
+    force:   yes
+  tags:
+  - init
+
+- name: "Slurp Etcd peer key"
+  slurp:
+    src: "/var/lib/ca/etcd/private/etcd-peer.key"
+  register: etcd_peer_key
+  delegate_to: "{{ groups['rootca-nodes'][0] }}"
+  run_once: true
+  tags:
+  - init
+
+- name: "Distribute Etcd peer key to all nodes"
+  copy:
+    content: "{{ etcd_peer_key['content'] | b64decode }}"
+    dest:    "/etc/etcd/etcd-peer.key"
+    owner:   "{{ conf.username }}"
+    group:   "{{ conf.groupname }}"
+    mode:    "u=r,g=r,o="
+    force:   yes
+  tags:
+  - init
+
 - name: "Final state for service - {{ service_final.state }}"
   service:
     name:    "{{ item }}"
@@ -160,3 +306,5 @@
   - service
   - verify
 
+# The correct way to make secured requests to the endpoint
+# ETCDCTL_API=3 etcdctl --cacert="/etc/etcd/ca.crt" --cert="/etc/etcd/etcd.crt" --key="/etc/etcd/etcd.key" --endpoints="https://ha01.sdev.munio.local:2379" member list

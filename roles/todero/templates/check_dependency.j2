@@ -1,0 +1,17 @@
+{% set services = check.services | default([]) %}
+  - type: dependency
+    title: "Service '{{ todero_service_name }}' dependency health-check"
+{% if services | length == 0 %}
+    services: []
+{% else %}
+    services:
+{%   if services is string %}
+    - "{{ services }}"
+{%   else %}
+{%     for service in services %}
+    - "{{ service }}"
+{%     endfor %}
+{%   endif %}
+{% endif %}
+    interval: 30
+

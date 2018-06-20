@@ -1,0 +1,11 @@
+{% set protocol = check.protocol | default('tcp') %}
+  - type: socket
+    title: "Service '{{ todero_service_name }}' port health-check"
+    protocol: "{{ protocol | lower() }}"
+    port: {{ check.port | default(0) | int }}
+{% if protocol == 'tcp' %}
+{%   set state = check.state | default('LISTEN') %}
+    state: "{{ state }}"
+{% endif %}
+    interval: {{ check.interval | default(30) | int }}
+

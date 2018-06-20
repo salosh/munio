@@ -1,0 +1,41 @@
+node.name: "{{ inventory_hostname }}"
+node.lan_address: "{{ bind_host }}"
+node.wan_address: "{{ bind_host }}"
+
+node.meta.rack: "rv1"
+# node.meta.tags: []
+# node.meta.kvtags: {}
+
+
+path.data: "/var/lib/todero"
+path.logs: "/var/log/todero"
+
+{% set etcd_cluster = [] %}
+{% for node in groups['etcd-nodes'] %}
+{%   set tmp = etcd_cluster.append('"' ~ node ~'.'~ domain_name ~ ':2379' ~ '"') %}
+{% endfor %}
+#etcd.hosts: [{{ etcd_cluster | join(',') }}]
+etcd.hosts: ["127.0.0.1:2379"]
+
+#tls followed by:#
+#
+#    no arguments, if the server certificate is signed by a system-installed CA and no client cert is needed
+#    a single argument that is the CA PEM file, if the server cert is not signed by a system CA and no client cert is needed
+#    two arguments - path to cert PEM file, the path to private key PEM file - if the server certificate is signed by a system-installed CA and a client certificate is needed
+#    three arguments - path to cert PEM file, path to client private key PEM file, path to CA PEM file - if the server certificate is not signed by a system-installed CA and client certificate is needed.
+
+{% set elastic_cluster = [] %}
+{% for node in groups['elasticsearch-nodes'] %}
+{%   set tmp = elastic_cluster.append('"' ~ ips[cnc_net][node].ip ~ ':9200' ~ '"') %}
+{% endfor %}
+elasticsearch.hosts: [{{ elastic_cluster | join(',') }}]
+#elasticsearch.hosts: ["http://127.0.0.1:9200","http://{{ bind_host }}:9200"]
+
+publishers:
+  - lll
+  - tcp://xx/yyy?mode=ggg
+
+subscribers:
+  - xxx
+
+debug: true
