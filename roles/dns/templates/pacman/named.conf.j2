@@ -67,16 +67,23 @@ zone "{{ nets[cnc_net].cidr | ipaddr('revdns') }}" IN {
         allow-update { none; };
 };
 
+{% if service_discovery_provider == 'todero' %}
+# Todero service-discovery forward zone settings
+{%   set port = 5453 %}
+{% elif service_discovery_provider == 'consul' %}
+# Consul service-discovery forward zone settings
+{%   set port = 8600 %}
+{% endif %}
 zone "lb" IN {
         type forward;
         forward only;
         forwarders {
-          // query local consul first
-          {{ ips[cnc_net][inventory_hostname].ip }} port 8600;
+          // query local first
+          {{ ips[cnc_net][inventory_hostname].ip }} port {{ port }};
           // then other nodes
 {% for dns_node in groups['lb-nodes'] %}
 {%   if inventory_hostname != dns_node %}
-          {{ ips[cnc_net][dns_node].ip }} port 8600;
+          {{ ips[cnc_net][dns_node].ip }} port {{ port }};
 {%   endif %}
 {% endfor %}
         };

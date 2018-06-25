@@ -1,0 +1,75 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Munio. <https://github.com/salosh/munio.git>
+#
+#    Munio is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Munio is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Munio.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+---
+- name: "Slurp Vault token"
+  slurp:
+    src: "~/.vault-token"
+  register: vault_login_token
+  delegate_to: "{{ groups['vault-nodes'][0] }}"
+  run_once: true
+
+- set_fact:
+    cert_path: "{{ cert_path_prefix | default('/root') }}/.vault_cert_server_{{ service }}"
+    vault_url: "http://{{ vault_host | default(bind_host) }}:{{ vault_port | default(bind_port) }}"
+
+- name: "Issue certificate for {{ service }}"
+  vars:
+    payload:
+      "common_name": "{{ service }}.{{ domain_name }}"
+  shell:
+    "{{ item }}"
+  with_items:
+  - "curl --request POST --header 'X-Vault-Token: {{ vault_login_token['content'] | b64decode }}' --data '{{ payload | to_json }}' '{{ vault_url }}/v1/munio/issue/service' > {{ cert_path }}.json"
+  delegate_to: "{{ ansible_play_hosts[0] }}"
+  run_once: true
+
+- name: "Slurp Issued certificate"
+  slurp:
+    src: "{{ cert_path }}.json"
+  register: issued_certificate
+  delegate_to: "{{ ansible_play_hosts[0] }}"
+  run_once: true
+
+- set_fact:
+    issued_certificate_data: "{{ issued_certificate['content'] | b64decode }}"
+
+- debug:
+    var: issued_certificate_data
+
+- name: "Write issued certificate"
+  copy:
+    content: "{{ issued_certificate_data.data.certificate.split('\n') | list | join('\n')}}"
+    dest:    "{{ ssl_path_cert | default(cert_path ~ '.crt') }}"
+    owner:   "root"
+    group:   "root"
+    mode:    "u=r,g=r,o="
+    force:   yes
+  tags:
+  - init
+
+- name: "Write issued private key"
+  copy:
+    content: "{{ issued_certificate_data.data.private_key.split('\n') | list | join('\n')}}"
+    dest:    "{{ ssl_path_key | default(cert_path ~ '.key') }}"
+    owner:   "root"
+    group:   "root"
+    mode:    "u=r,g=r,o="
+    force:   yes
+  tags:
+  - init

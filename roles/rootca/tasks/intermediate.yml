@@ -1,0 +1,103 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Munio. <https://github.com/salosh/munio.git>
+#
+#    Munio is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Munio is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Munio.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+---
+- name: "Intermediate :: Create CA directories"
+  file:
+    path:  "{{ item }}"
+    state: "directory"
+    owner: "{{ conf.username }}"
+    group: "{{ conf.groupname }}"
+  with_items:
+  - "{{ intermediate_dir }}"
+  - "{{ intermediate_dir }}/certs"
+  - "{{ intermediate_dir }}/crl"
+  - "{{ intermediate_dir }}/csr"
+  - "{{ intermediate_dir }}/newcerts"
+  - "{{ intermediate_dir }}/private"
+  tags:
+  - conf
+
+- name: "Intermediate :: Deploy initial indexes"
+  copy:
+    content: "{{ item.content }}"
+    dest:    "{{ item.dest }}"
+  with_items:
+  - dest:    "{{ intermediate_dir }}/index.txt"
+    content: ""
+  - dest:    "{{ intermediate_dir }}/serial"
+    content: "5410"
+  - dest:    "{{ intermediate_dir }}/crlnumber"
+    content: "5410"
+  tags:
+  - conf
+
+- name: "Intermediate :: Deploy configuration"
+  vars:
+    ca_type: "intermediate"
+  template:
+    src:   "{{ role_path }}/../rootca/templates/{{ ansible_pkg_mgr }}/openssl.cnf.j2"
+    dest:  "{{ intermediate_dir }}/openssl.cnf"
+    owner: "{{ conf.username }}"
+    group: "{{ conf.groupname }}"
+    mode:  "u=rw,g=r,o=r"
+    force: yes
+  tags:
+  - conf
+
+# TODO FIXME root and inter should not use the same key file
+- name: "Intermediate :: Generate creds"
+  shell:
+    "{{ item }}"
+  with_items:
+#  - openssl genrsa -aes256 {% if encrypt_creds | bool %}-passout file:/root/.ssh/id_rsa{% endif %} -out {{ intermediate_dir }}/private/ca.key 4096
+  - openssl req -nodes -newkey rsa:4096 -keyout {{ intermediate_dir }}/private/ca.key {% if encrypt_creds | bool %}-passout file:/root/.ssh/id_rsa{% endif %} -subj "/C=IL/ST=Israel/L=JM/O=Munio/OU=DevOps/CN=www.{{ domain_name }}/emailAddress=''"
+  - openssl rsa -in {{ intermediate_dir }}/private/ca.key {% if encrypt_creds | bool %}-passin file:/root/.ssh/id_rsa{% endif %} -pubout > {{ intermediate_dir }}/private/ca.pub
+  - chmod 400 {{ intermediate_dir }}/private/ca.key
+  - openssl req -config {{ intermediate_dir }}/openssl.cnf -new -sha256 -key {{ intermediate_dir }}/private/ca.key {% if encrypt_creds | bool %}-passin file:/root/.ssh/id_rsa{% endif %} -out {{ intermediate_dir }}/csr/intermediate.csr -subj "/OU=Munio Certificate Authority/CN=Munio {{ intermediate_ca_name | capitalize }} CA"
+  - openssl ca -batch -config {{ intermediate_dir }}/../openssl.cnf -extensions v3_intermediate_ca -days 1825 -notext -md sha256 -passin file:/root/.ssh/id_rsa -in {{ intermediate_dir }}/csr/intermediate.csr -out {{ intermediate_dir }}/certs/ca.crt
+  - chmod 444 {{ intermediate_dir }}/certs/ca.crt
+  - openssl x509 -noout -text -in {{ intermediate_dir }}/certs/ca.crt
+  - openssl verify -CAfile {{ intermediate_dir }}/../certs/ca.crt {{ intermediate_dir }}/certs/ca.crt
+  register: interca_creds
+  tags:
+  - conf
+
+- name: "Intermediate :: Debug creds creation process"
+  debug:
+    var: interca_creds.results[-2].stdout_lines
+
+- name: "Intermediate :: Verify creds creation process"
+  debug:
+    var: interca_creds.results[-1].stdout_lines
+
+- name: "Intermediate :: Generate certificates chain file"
+  shell:
+    "{{ item }}"
+  with_items:
+  - cat {{ intermediate_dir }}/certs/ca.crt {{ intermediate_dir }}/../certs/ca.crt > {{ intermediate_dir }}/certs/ca-chain.crt
+  - chmod 444 {{ intermediate_dir }}/certs/ca-chain.crt
+  tags:
+  - conf
+
+- name: "Intermediate :: Generate CRLs"
+  shell:
+    openssl ca -config {{ intermediate_dir }}/openssl.cnf -gencrl {% if encrypt_creds | bool %}-passin file:/root/.ssh/id_rsa{% endif %} -out {{ intermediate_dir }}/crl/ca.crl
+  register: service_server_certs
+  tags:
+  - conf

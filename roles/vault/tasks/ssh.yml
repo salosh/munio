@@ -1,0 +1,70 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Munio. <https://github.com/salosh/munio.git>
+#
+#    Munio is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Munio is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Munio.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+---
+- name: "Deploy role-ssh-client"
+  template:
+    src:   role-ssh-client.j2
+    dest:  /root/.vault_role-ssh-client.json
+    owner: root
+    group: root
+    mode:  "u=rw,g=r,o="
+  tags:
+  - init
+  - vault_ca_ssh_client
+
+# TODO private_key="XXX" public_key="XXX" as an option, instead of generating
+- name: "Create Client SSH CA"
+  environment:
+    VAULT_ADDR: "http://{{ bind_host }}:{{ bind_port }}"
+  shell:
+    "{{ item }}"
+  with_items:
+  - vault write ssh-sign-client/config/ca generate_signing_key=true
+  - vault write ssh-sign-client/roles/role-ssh-client @/root/.vault_role-ssh-client.json
+  - vault read -field=public_key ssh-sign-client/config/ca > /root/.vault_trusted-user-ca-keys.pub
+  args:
+    creates: "/root/.vault_trusted-user-ca-keys.pub"
+  delegate_to: "{{ ansible_play_hosts[0] }}"
+  run_once: true
+  tags:
+  - init
+  - vault_ca_ssh_client
+
+# TODO private_key="XXX" public_key="XXX" as an option, instead of generating
+- name: "Create Host SSH CA"
+  environment:
+    VAULT_ADDR: "http://{{ bind_host }}:{{ bind_port }}"
+  shell:
+    "{{ item }}"
+  with_items:
+  - vault write ssh-sign-host/config/ca generate_signing_key=true
+  - vault write ssh-sign-host/roles/role-ssh-host key_type=ca ttl=8760h allow_host_certificates=true allowed_domains="localdomain,{{ domain_suffix }}" allow_subdomains=true
+  - vault read -field=public_key ssh-sign-host/config/ca > /root/.vault_trusted-host-ca-keys.pub
+  args:
+    creates: "/root/.vault_trusted-host-ca-keys.pub"
+  delegate_to: "{{ ansible_play_hosts[0] }}"
+  run_once: true
+  tags:
+  - init
+  - vault_ca_ssh_host
+
+
+#VAULT_ADDR=http://172.16.0.201:8200 vault write ssh-sign-host/sign/role-ssh-host cert_type=host public_key=@/etc/ssh/ssh_host_ecdsa_key.pub
+#export VAULT_ADDR=http://172.16.0.201:8200
+#vault write pki/root/generate/internal common_name=ha01.sdev.munio.local

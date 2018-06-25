@@ -1,0 +1,171 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Munio. <https://github.com/salosh/munio.git>
+#
+#    Munio is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Munio is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Munio.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+---
+- name: "Install packages"
+  vars:
+    packages: "{{ conf.packages }}"
+  include_tasks: "{{ role_path }}/../common/tasks/{{ ansible_pkg_mgr }}/package.yml"
+  tags:
+  - bin
+
+- name: "Download requirements"
+  include_tasks: "{{ role_path }}/../common/tasks/requirements.yml"
+  when:
+  - "connectivity_mode == 'online'"
+  tags:
+  - reqs
+
+- name: "Create OS groups"
+  group:
+    name:   "{{ conf.groupname }}"
+    system: "yes"
+    state:  "present"
+  tags:
+  - init
+
+- name: "Create OS users"
+  user:
+    name:      "{{ conf.username }}"
+    group:     "{{ conf.groupname }}"
+    append:    "yes"
+    shell:     "/bin/false"
+    home:      "/var/lib/{{ conf.username }}"
+    move_home: "yes"
+    system:    "yes"
+    state:     "present"
+  tags:
+  - init
+
+- name: "Extract binary '{{ requirements.binary.name }}'"
+  unarchive:
+    src:  "{{ requirements.binary.local_path }}"
+    dest: "/usr/share"
+    owner: "{{ conf.username }}"
+    group: "{{ conf.username }}"
+    mode: "u=rwx,g=rx,o=rx"
+  tags:
+  - bin
+
+- name: "Create working directory link"
+  file:
+    src: "{{ conf.work_dir }}-{{ kibana_version }}-linux-x86_64"
+    dest: "{{ conf.work_dir }}"
+    state: link
+    owner: "{{ conf.username }}"
+    group: "{{ conf.username }}"
+    mode:  "u=rwx,g=rx,o=rx"
+    force: yes
+
+- name: "Create binary links"
+  file:
+    src: "../share/kibana-{{ kibana_version }}-linux-x86_64/bin/{{ item }}"
+    dest: "/usr/bin/{{ item }}"
+    state: link
+    owner: "{{ conf.username }}"
+    group: "{{ conf.username }}"
+    mode:  "u=rwx,g=rx,o=rx"
+    force: yes
+  loop:
+  - "kibana"
+  - "kibana-keystore"
+  - "kibana-plugin"
+
+- name: "Create node binary links"
+  file:
+    src: "../share/kibana-{{ kibana_version }}-linux-x86_64/node/bin/node"
+    dest: "/usr/bin/node"
+    state: link
+    owner: "{{ conf.username }}"
+    group: "{{ conf.username }}"
+    mode:  "u=rwx,g=rx,o=rx"
+    force: yes
+
+- name: "Deploy service file"
+  template:
+    src:   kibana_systemd.j2
+    dest:  /etc/systemd/system/kibana.service
+    owner: root
+    group: root
+    mode:  "u=rw,g=r,o=r"
+  tags:
+  - service
+
+- name: "Stop service"
+  service:
+    name:    "{{ item }}"
+    state:   stopped
+    enabled: no
+  loop: "{{ conf.services }}"
+  tags:
+  - service
+
+- name: "Deploy '{{ ansible_pkg_mgr }}' based configuration"
+  include_tasks: "./conf_{{ ansible_pkg_mgr }}.yml"
+
+- name: "Create required directories"
+  file:
+    path:  "{{ item }}"
+    state: "directory"
+    owner: "{{ conf.username }}"
+    group: "{{ conf.groupname }}"
+    mode: "u=rwx,g=rwx,o=rx"
+  loop:
+  - "{{ conf.conf_dir }}"
+  - "{{ conf.log_dir }}"
+  tags:
+  - conf
+
+- name: "Deploy configuration"
+  template:
+    src:   "{{ item }}.j2"
+    dest:  "{{ conf.conf_dir }}/{{ item }}"
+    owner: "{{ conf.username }}"
+    group: "{{ conf.groupname }}"
+    mode: "u=rwx,g=rwx,o=rx"
+    force: yes
+  loop:
+  - "kibana.yml"
+  tags:
+  - conf
+
+- name: "Final state for service - {{ service_final.state }}"
+  service:
+    name:    "{{ item }}"
+    state:   "{{ service_final.state }}"
+    enabled: "{{ service_final.enabled }}"
+  loop: "{{ conf.services }}"
+  tags:
+  - service
+
+- name: "Wait for ports"
+  wait_for:
+    host:    "{{ item.host }}"
+    port:    "{{ item.port }}"
+    state:   started
+    timeout: 30
+  loop:
+  - host: "{{ bind_host | d('127.0.0.1') }}"
+    port: "{{ bind_port | d('') }}"
+  loop_control:
+    label: "{{ item.host }}:{{ item.port }}"
+  when:
+  - "service_final.state != 'stopped'"
+  tags:
+  - service
+  - verify

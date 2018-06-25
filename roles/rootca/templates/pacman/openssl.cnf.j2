@@ -1,8 +1,7 @@
-# https://jamielinux.com/docs/openssl-certificate-authority/sign-server-and-client-certificates.html
 [ ca ]
-default_ca = CA_NYLOX
+default_ca = CA_MUNIO
 
-[ CA_NYLOX ]
+[ CA_MUNIO ]
 # Directory and file locations.
 {% if ca_type == 'root' %}
 dir               = {{ conf.root_dir }}
@@ -99,7 +98,7 @@ emailAddress                    = Email Address
 countryName_default             = IL
 stateOrProvinceName_default     = Israel
 localityName_default            =
-0.organizationName_default      = Nylox
+0.organizationName_default      = Munio
 #organizationalUnitName_default =
 #emailAddress_default           =
 
@@ -117,7 +116,7 @@ authorityKeyIdentifier = keyid:always,issuer
 basicConstraints = critical, CA:true, pathlen:0
 keyUsage = critical, digitalSignature, cRLSign, keyCertSign
 
-[ usr_cert ]
+[ client_cert ]
 # Extensions for client certificates (`man x509v3_config`).
 basicConstraints = CA:FALSE
 nsCertType = client, email
@@ -138,13 +137,7 @@ keyUsage = critical, digitalSignature, keyEncipherment
 extendedKeyUsage = serverAuth
 crlDistributionPoints = URI:http://www.{{ domain_name }}/ca.crl
 
-[ consul_cert ]
-# http://russellsimpkins.blogspot.co.il/2015/10/consul-adding-tls-using-self-signed.html
-# https://www.mauras.ch/securing-consul.html#tls
-# https://www.digitalocean.com/community/tutorials/how-to-secure-consul-with-tls-encryption-on-ubuntu-14-04
-# https://github.com/hashicorp/consul/issues/2873
-# https://www.consul.io/docs/agent/encryption.html
-
+[ combined_cert ]
 basicConstraints = CA:false
 subjectKeyIdentifier = hash
 authorityKeyIdentifier = keyid:always
