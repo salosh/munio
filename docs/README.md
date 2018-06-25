@@ -1,4 +1,4 @@
-Welcome to Nylox
+Welcome to Munio
 ================
 
 Goal
@@ -17,15 +17,15 @@ Features
 Deploy
 ----------------
 
-Ansible 2.4.0.0 and above must be installed.
+Ansible 2.5.0 and above must be installed.
 
- * Clone and initialize Nylox:
+ * Clone and initialize Munio:
 ```shell                          
-git clone https://github.com/nylox/nylox.git
+git clone https://github.com/salosh/munio.git
 git config --global push.default matching
 git config --global user.name "Your Name"
-git config --global user.email your.email@example.com
-cd nylox
+git config --global user.email your.email@salosh.org
+cd munio
 ansible-playbook playbooks/add_site.yml -i "127.0.0.1," -c local -e item_name=dev
 ```
 
@@ -60,3 +60,5 @@ ansible-playbook -i sites/dev playbooks/name_of_playbook_here.yml
  - report   # Send metrics or verify results to an external monitoring system
  - xtraz    # Extra steps, not required for an operational site
 
+* * *
+Visit our website at https://munio.io
