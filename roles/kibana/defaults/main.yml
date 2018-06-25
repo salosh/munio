@@ -1,0 +1,48 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Munio. <https://github.com/salosh/munio.git>
+#
+#    Munio is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Munio is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Munio.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+---
+conf:
+  packages: []
+  services:
+  - kibana
+  username: "kibana"
+  groupname: "kibana"
+  conf_file: kibana.yml
+  conf_dir: /etc/kibana
+  work_dir: "/usr/share/kibana"
+  log_dir: /var/log/kibana
+
+kibana_version: "6.3.0"
+kibana_download_uri: "https://artifacts.elastic.co/downloads/kibana"
+
+requirements:
+  binary:
+    type:        "uri"
+    name:        "kibana-{{ kibana_version }}-linux-x86_64.tar.gz" 
+    remote_path: "{{ kibana_download_uri }}/kibana-{{ kibana_version }}-linux-x86_64.tar.gz"
+    local_path:  "{{ dir_reqs }}/kibana-{{ kibana_version }}-linux-x86_64.tar.gz"
+    sha256:      "f3d89d6d7239138e57ca87e834c52057db97a7acd7b6c0e6ac2ea642674c6992"
+
+bind_host: "{{ ips[cnc_net][inventory_hostname].ip }}"
+bind_port: "5601"
+
+service_final:
+  state: "restarted"
+  enabled: "yes"
+

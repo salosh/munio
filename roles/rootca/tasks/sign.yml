@@ -1,26 +1,27 @@
 # Author: Salo Shp <saloshp@gmail.com>
 #
-#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#    This file is part of Munio. <https://github.com/salosh/munio.git>
 #
-#    Nylox is free software: you can redistribute it and/or modify
+#    Munio is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
 #    the Free Software Foundation, either version 3 of the License, or
 #    (at your option) any later version.
 #
-#    Nylox is distributed in the hope that it will be useful,
+#    Munio is distributed in the hope that it will be useful,
 #    but WITHOUT ANY WARRANTY; without even the implied warranty of
 #    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #    GNU General Public License for more details.
 #
 #    You should have received a copy of the GNU General Public License
-#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#    along with Munio.  If not, see <http://www.gnu.org/licenses/>.
 #
 
 ---
-- set_fact:
-    wts_key: "{{ intermediate_dir }}/private/{{ what_to_sign }}.key"
-    wts_csr: "{{ intermediate_dir }}/csr/{{ what_to_sign }}.csr"
-    wts_crt: "{{ intermediate_dir }}/certs/{{ what_to_sign }}.crt"
+- name: "Configure variables based on args"
+  set_fact:
+    wts_key: "{{ intermediate_dir }}/private/{% if prefix is defined %}{{ prefix }}_{% endif %}{{ what_to_sign }}.key"
+    wts_csr: "{{ intermediate_dir }}/csr/{% if prefix is defined %}{{ prefix }}_{% endif %}{{ what_to_sign }}.csr"
+    wts_crt: "{{ intermediate_dir }}/certs/{% if prefix is defined %}{{ prefix }}_{% endif %}{{ what_to_sign }}.crt"
     extension : "{{ extension | default('server_cert') }}"
 
 - name: "Sign :: Generate private key for '{{ what_to_sign }}'"
@@ -34,7 +35,7 @@
 
 - name: "Sign :: Generate CSR for '{{ what_to_sign }}'"
   shell:
-    echo -e "\n\n\n\nNylox {{ what_to_sign | capitalize }}\n{{ subject | default(what_to_sign) }}\n{{ what_to_sign }}@{{ domain_name }}\n" |  openssl req -config {{ intermediate_dir }}/openssl.cnf -key {{ wts_key }} -new -sha256 -out {{ wts_csr }}
+    openssl req -config {{ intermediate_dir }}/openssl.cnf -key {{ wts_key }} -new -sha256 -out {{ wts_csr }} -subj "/OU=Munio {{ what_to_sign | capitalize }}/CN={{ subject | default(what_to_sign) }}/emailAddress={{ what_to_sign }}@{{ domain_name }}"
   register: sign_create_csr
   args:
     creates: "{{ wts_csr }}"
@@ -43,7 +44,7 @@
 
 - name: "Sign :: Generate certificate for '{{ what_to_sign }}'"
   shell:
-    echo -e "y\ny\n" | openssl ca -config {{ intermediate_dir }}/openssl.cnf -extensions {{ extension }} -days 366 -notext -md sha256 -in {{ wts_csr }} -passin file:/root/.ssh/id_rsa -out {{ wts_crt }}
+    openssl ca -batch -config {{ intermediate_dir }}/openssl.cnf -extensions {{ extension }} -days 366 -notext -md sha256 -in {{ wts_csr }} -passin file:/root/.ssh/id_rsa -out {{ wts_crt }}
   register: sign_create_certificate
   args:
     creates: "{{ wts_crt }}"

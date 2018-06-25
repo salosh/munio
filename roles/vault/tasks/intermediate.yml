@@ -1,19 +1,19 @@
 # Author: Salo Shp <saloshp@gmail.com>
 #
-#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#    This file is part of Munio. <https://github.com/salosh/munio.git>
 #
-#    Nylox is free software: you can redistribute it and/or modify
+#    Munio is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
 #    the Free Software Foundation, either version 3 of the License, or
 #    (at your option) any later version.
 #
-#    Nylox is distributed in the hope that it will be useful,
+#    Munio is distributed in the hope that it will be useful,
 #    but WITHOUT ANY WARRANTY; without even the implied warranty of
 #    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #    GNU General Public License for more details.
 #
 #    You should have received a copy of the GNU General Public License
-#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#    along with Munio.  If not, see <http://www.gnu.org/licenses/>.
 #
 
 ---
@@ -23,8 +23,8 @@
   shell:
     "{{ item }}"
   with_items:
-  - vault mount -path=nylox -description="Nylox Vault Intermediate CA" -max-lease-ttl=2920h pki
-  - vault write nylox/intermediate/generate/internal common_name="Nylox Vault Intermediate CA" ttl=2920h key_bits=4096 exclude_cn_from_sans=true | tail -n +3 | sed 's|csr    ||g' > /var/lib/ca/intermediate/csr/vault_ca.csr
+  - vault secrets enable -path=munio -description="Munio Vault Intermediate CA" -max-lease-ttl=2920h pki
+  - vault write munio/intermediate/generate/internal common_name="Munio Vault Intermediate CA" ttl=2920h key_bits=4096 exclude_cn_from_sans=true | tail -n +3 | sed 's|csr    ||g' > /var/lib/ca/intermediate/csr/vault_ca.csr
   args:
     creates: "/var/lib/ca/intermediate/csr/vault_ca.csr"
   delegate_to: "{{ ansible_play_hosts[0] }}"
@@ -37,7 +37,7 @@
   shell:
     "{{ item }}"
   with_items:
-  - echo -e "y\ny\n" | openssl ca -config /var/lib/ca/openssl.cnf -extensions v3_intermediate_ca -days 366 -notext -md sha256 -passin file:/root/.ssh/id_rsa -in /var/lib/ca/intermediate/csr/vault_ca.csr -out /var/lib/ca/intermediate/certs/vault_ca.crt
+  - openssl ca -batch -config /var/lib/ca/openssl.cnf -extensions v3_intermediate_ca -days 366 -notext -md sha256 -passin file:/root/.ssh/id_rsa -in /var/lib/ca/intermediate/csr/vault_ca.csr -out /var/lib/ca/intermediate/certs/vault_ca.crt
   args:
     creates: "/var/lib/ca/intermediate/certs/vault_ca.crt"
   delegate_to: "{{ ansible_play_hosts[0] }}"
@@ -52,7 +52,7 @@
   shell:
     "{{ item }}"
   with_items:
-  - vault write nylox/intermediate/set-signed certificate=@/var/lib/ca/intermediate/certs/vault_ca.crt
+  - vault write munio/intermediate/set-signed certificate=@/var/lib/ca/intermediate/certs/vault_ca.crt
   delegate_to: "{{ ansible_play_hosts[0] }}"
   run_once: true
   tags:
@@ -65,33 +65,33 @@
   shell:
     "{{ item }}"
   with_items:
-  - vault write nylox/config/urls issuing_certificates="http://{{ lb_services.vault.hostname }}:{{ bind_port }}/v1/nylox/ca" crl_distribution_points="http://{{ lb_services.vault.hostname }}:{{ bind_port }}/v1/nylox/crl"
+  - vault write munio/config/urls issuing_certificates="http://{{ lb_services.vault.hostname }}:{{ bind_port }}/v1/munio/ca" crl_distribution_points="http://{{ lb_services.vault.hostname }}:{{ bind_port }}/v1/munio/crl"
   delegate_to: "{{ ansible_play_hosts[0] }}"
   run_once: true
   tags:
   - init
   - vault_ca
 
-- name: "Create Nylox service role"
+- name: "Create Munio service role"
   environment:
     VAULT_ADDR: "http://{{ bind_host }}:{{ bind_port }}"
   shell:
     "{{ item }}"
   with_items:
-  - vault write nylox/roles/service key_bits=2048 max_ttl=2920h allowed_domains={{ domain_name }} allow_subdomains=true
+  - vault write munio/roles/service key_bits=2048 max_ttl=2920h allowed_domains={{ domain_name }} allow_subdomains=true
   delegate_to: "{{ ansible_play_hosts[0] }}"
   run_once: true
   tags:
   - init
   - vault_ca
 
-- name: "Create Nylox node role"
+- name: "Create Munio node role"
   environment:
     VAULT_ADDR: "http://{{ bind_host }}:{{ bind_port }}"
   shell:
     "{{ item }}"
   with_items:
-  - vault write nylox/roles/node key_bits=2048 max_ttl=720h allow_any_name=true
+  - vault write munio/roles/node key_bits=2048 max_ttl=720h allow_any_name=true
   delegate_to: "{{ ansible_play_hosts[0] }}"
   run_once: true
   tags:

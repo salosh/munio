@@ -1,19 +1,19 @@
 # Author: Salo Shp <saloshp@gmail.com>
 #
-#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#    This file is part of Munio. <https://github.com/salosh/munio.git>
 #
-#    Nylox is free software: you can redistribute it and/or modify
+#    Munio is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
 #    the Free Software Foundation, either version 3 of the License, or
 #    (at your option) any later version.
 #
-#    Nylox is distributed in the hope that it will be useful,
+#    Munio is distributed in the hope that it will be useful,
 #    but WITHOUT ANY WARRANTY; without even the implied warranty of
 #    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #    GNU General Public License for more details.
 #
 #    You should have received a copy of the GNU General Public License
-#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#    along with Munio.  If not, see <http://www.gnu.org/licenses/>.
 #
 
 ---
@@ -24,13 +24,26 @@
   tags:
   - reqs
 
-# TODO add group
-- name: "Add user '{{ conf.username }}'"
-  user:
-    name:  "{{ conf.username }}"
-    state: present
+- name: "Create OS groups"
+  group:
+    name:   "{{ conf.groupname }}"
+    system: "yes"
+    state:  "present"
   tags:
-  - conf
+  - init
+
+- name: "Create OS users"
+  user:
+    name:      "{{ conf.username }}"
+    group:     "{{ conf.groupname }}"
+    append:    "yes"
+    shell:     "/bin/false"
+    home:      "/var/lib/{{ conf.username }}"
+    move_home: "yes"
+    system:    "yes"
+    state:     "present"
+  tags:
+  - init
 
 - name: "Extract binary '{{ requirements.binary.name }}'"
   unarchive:
@@ -255,6 +268,10 @@
   - "vault auth enable userpass"
   - "vault secrets enable pki"
   - "vault secrets tune -max-lease-ttl=8760h pki"
+  - "vault secrets enable -path=ssh-sign-client ssh"
+  - "vault secrets tune -max-lease-ttl=8760h ssh-sign-client"
+  - "vault secrets enable -path=ssh-sign-host ssh"
+  - "vault secrets tune -max-lease-ttl=8760h ssh-sign-host"
   delegate_to: "{{ ansible_play_hosts[0] }}"
   run_once: true
   tags:
@@ -266,3 +283,12 @@
 - name: "Integrate with external Root CA"
   import_tasks: "./intermediate.yml"
 
+- name: "Configure SSH CA"
+  import_tasks: "./ssh.yml"
+
+- name: "Issue services certificates"
+  import_tasks: "./cert_server.yml"
+  when:
+  - "service is defined"
+  tags:
+  - xtraz
