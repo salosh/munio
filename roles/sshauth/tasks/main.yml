@@ -1,19 +1,19 @@
 # Author: Salo Shp <saloshp@gmail.com>
 #
-#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#    This file is part of Munio. <https://github.com/salosh/munio.git>
 #
-#    Nylox is free software: you can redistribute it and/or modify
+#    Munio is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
 #    the Free Software Foundation, either version 3 of the License, or
 #    (at your option) any later version.
 #
-#    Nylox is distributed in the hope that it will be useful,
+#    Munio is distributed in the hope that it will be useful,
 #    but WITHOUT ANY WARRANTY; without even the implied warranty of
 #    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #    GNU General Public License for more details.
 #
 #    You should have received a copy of the GNU General Public License
-#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#    along with Munio.  If not, see <http://www.gnu.org/licenses/>.
 #
 
 ---
@@ -23,7 +23,7 @@
     /bin/true
   changed_when: false
   register: result
-  until: result | succeeded
+  until: result is succeeded
   ignore_errors: yes
   retries: 54
   delay: 10
@@ -62,6 +62,17 @@
   tags:
   - conf 
   - auth
+
+- name: "Verify remote 'root public key' exists"
+  stat:
+    path: /root/.ssh/id_rsa.pub
+  register: remote_root_pubkey
+
+- name: "Create remote 'root public key'"
+  shell:
+    ssh-keygen -b 4096 -t rsa -f ~/.ssh/id_rsa -P ''
+  when:
+  - not remote_root_pubkey.stat.exists
 
 - name: "Slurp remote 'root public key'"
   slurp:
