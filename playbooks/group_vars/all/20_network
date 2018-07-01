@@ -150,7 +150,7 @@ ips: |
   {%       set tmp = host_entry.update({'offset': offset })                               %}
   {%     endif                                                                            %}
   {%     set tmp = ipz[key].update({host: host_entry })                                   %}
-  {%     set tmp = hostvars[host].update({'ips': ipz})                                    %}
+  {#     set tmp = hostvars[host].update({'ips': ipz})                                    #}
   {%   endfor                                                                             %}
   {% endfor                                                                               %}
   {{ (ipz) }}
