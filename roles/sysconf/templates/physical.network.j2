@@ -10,5 +10,5 @@ UseHostname=false
 {% else %}
 Address={{ ips[iface.net][inventory_hostname].ip }}/{{ nets[iface.net].prefix }}
 Gateway={{ nets[iface.net].gateway }}
-#DNS=8.8.8.8
+#DNS=1.1.1.1
 {% endif %}

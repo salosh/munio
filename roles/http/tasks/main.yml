@@ -1,19 +1,19 @@
 # Author: Salo Shp <saloshp@gmail.com>
 #
-#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#    This file is part of Munio. <https://github.com/salosh/munio.git>
 #
-#    Nylox is free software: you can redistribute it and/or modify
+#    Munio is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
 #    the Free Software Foundation, either version 3 of the License, or
 #    (at your option) any later version.
 #
-#    Nylox is distributed in the hope that it will be useful,
+#    Munio is distributed in the hope that it will be useful,
 #    but WITHOUT ANY WARRANTY; without even the implied warranty of
 #    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #    GNU General Public License for more details.
 #
 #    You should have received a copy of the GNU General Public License
-#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#    along with Munio.  If not, see <http://www.gnu.org/licenses/>.
 #
 
 ---
@@ -29,8 +29,7 @@
     name:    "{{ item }}"
     state:   stopped
     enabled: no
-  with_items:
-  - "{{ conf.services }}"
+  loop: "{{ conf.services }}"
   tags:
   - service
 
@@ -39,7 +38,7 @@
 
 - name: "Deploy '{{ ansible_pkg_mgr }}' extra files"
   vars:
-    heading: "{{ inventory_hostname }} - Deployed by Nylox"
+    heading: "{{ inventory_hostname }} - Deployed by Munio"
     content: "Last update at - {{ ansible_date_time.iso8601_micro }}"
   template:
     src:   "{{ item }}.j2"
@@ -48,7 +47,7 @@
     group: "{{ conf.groupname }}"
     mode:  "u=rw,g=r,o=r"
     force: yes
-  with_items:
+  loop:
   - robots.txt
   - README.html
   tags:
@@ -59,8 +58,7 @@
     name:    "{{ item }}"
     state:   "{{ service_final.state }}"
     enabled: "{{ service_final.enabled }}"
-  with_items:
-  - "{{ conf.services }}"
+  loop: "{{ conf.services }}"
   tags:
   - service
 
@@ -70,9 +68,9 @@
     port:    "{{ item.port }}"
     state:   started
     timeout: 5
-  with_items:
+  loop:
   - host: "{{ bind_host }}"
-    port: "80"
+    port: "{{ bind_port }}"
   loop_control:
     label: "{{ item.host }}:{{ item.port }}"
   when:

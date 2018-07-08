@@ -118,16 +118,18 @@ ips: |
   {%     set ofst = hvars['ofst'] | d(ofst_min + by_groupid + by_nodeid + by_rackid)      %}
   {%     set ip = hvars['ip_' + key] | d(cidr | ipaddr(ofst) | ipaddr('address'))         %}
   {%     set ip_verified = ip | ipaddr(cidr) | ipaddr('address')                          %}
+  {%       set ip_record = (host ~' - '~ ip)                                              %}
   {%     if ip not in cols_detection                                                      %}
   {%       set tmp = cols_detection.append(ip)                                            %}
   {%     else                                                                             %}
-  {%       set tmp = cols_detected.append(host ~' - '~ ip)                                %}
+  {%       set tmp = cols_detected.append(ip_record)                                      %}
   {%       set tmp = ipz[key].update({'collisions': cols_detected | sort| list |unique }) %}
   {%     endif                                                                            %}
   {%     set host_entry = {}                                                              %}
-  {%     set tmp = host_entry.update({'ip': ip_verified })                                %}
-  {%     if 'unverified' in net_tags                                                      %}
+  {%     if (ip_verified and ip_record not in cols_detected) or 'unverified' in net_tags  %}
   {%       set tmp = host_entry.update({'ip': ip })                                       %}
+  {%     else                                                                             %}
+  {%       set tmp = host_entry.update({'ip': False })                                    %}
   {%     endif                                                                            %}
   {%     set tmp = host_entry.update({'cidr': cidr })                                     %}
   {%     set mac = ['52', '54', '00']                                                     %}

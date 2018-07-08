@@ -7,8 +7,7 @@
     group: "{{ conf.groupname }}"
     mode:  "u=rw,g=r,o=r"
     force: yes
-  with_items:
-  - "{{ conf.files }}"
+  loop: "{{ conf.files }}"
   tags:
   - conf
 
@@ -19,7 +18,7 @@
     owner: "{{ conf.username }}"
     group: "{{ conf.groupname }}"
     mode:  "u=rwx,g=rx,o=rx"
-  with_items:
+  loop:
   - "{{ conf.root_dir }}"
   tags:
   - conf

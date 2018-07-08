@@ -1,6 +1,5 @@
 site_name: "s{{ site_id }}"
 rack_name: "r{{ rack_type }}{{ rack_id }}"
 
-domain_suffix: "nylox.local"
-domain_name: "{{ rack_name }}.{{ site_name }}.{{ domain_suffix }}"
+domain_name: "{{ site_name }}.{{ domain_suffix }}"
 fqdn: "{{ domain_name }}"

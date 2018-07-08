@@ -34,14 +34,20 @@ pacman:
   log_dir:  "/var/log/todero"
 
 apt:
-  packages: []
-  services: []
-  username:  "default"
-  groupname: "default"
+  packages:
+  - gcc
+  - python-pip
+  - python-systemd
+  services:
+  - todero
+  username:  "root"
+  groupname: "root"
   files:
-  - name: "default.yml"
-    path: "/tmp"
-  root_dir:  "/tmp/default"
+  - name: "config.yml"
+    path: "/etc/todero"
+  root_dir:  "/var/lib/todero"
+  conf_dir:  "/etc/todero"
+  log_dir:  "/var/log/todero"
 
 yum:
   packages: []

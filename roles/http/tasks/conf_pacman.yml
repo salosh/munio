@@ -7,7 +7,6 @@
     group: "{{ conf.groupname }}"
     mode:  "u=rw,g=r,o=r"
     force: yes
-  with_items:
-  - "{{ conf.files }}"
+  loop: "{{ conf.files }}"
   tags:
   - conf

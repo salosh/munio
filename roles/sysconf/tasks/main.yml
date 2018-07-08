@@ -1,30 +1,33 @@
 # Author: Salo Shp <saloshp@gmail.com>
 #
-#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#    This file is part of Munio. <https://github.com/salosh/munio.git>
 #
-#    Nylox is free software: you can redistribute it and/or modify
+#    Munio is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
 #    the Free Software Foundation, either version 3 of the License, or
 #    (at your option) any later version.
 #
-#    Nylox is distributed in the hope that it will be useful,
+#    Munio is distributed in the hope that it will be useful,
 #    but WITHOUT ANY WARRANTY; without even the implied warranty of
 #    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #    GNU General Public License for more details.
 #
 #    You should have received a copy of the GNU General Public License
-#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#    along with Munio.  If not, see <http://www.gnu.org/licenses/>.
 #
 
 ---
-- name: "Configure DNS settings"
-  import_tasks: "./dns.yml"
+- name: "Configure proxy"
+  import_tasks: "./proxy.yml"
 
 - name: "Configure grub"
   import_tasks: "./grub.yml"
 
 - name: "Configure networking"
   import_tasks: "./network.yml"
+
+- name: "Configure DNS settings"
+  import_tasks: "./dns.yml"
 
 - name: "Configure operating-system settings"
   import_tasks: "./os.yml"
@@ -51,5 +54,20 @@
   when:
   - "sysconf_final_op is defined"
   - "sysconf_final_op != 'NOP'"
+  tags:
+  - conf
+
+- name: "Wait for nodes to complete reboot"
+  local_action:
+    wait_for
+    host={{ ips[cnc_net][inventory_hostname].ip }}
+    port=22
+    search_regex="OpenSSH"
+    delay=30
+    timeout=541
+  failed_when: false
+  when:
+  - "sysconf_final_op is defined"
+  - "sysconf_final_op == 'reboot'"
   tags:
   - conf
