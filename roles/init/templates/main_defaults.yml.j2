@@ -5,14 +5,32 @@
 pacman:
   packages: []
   services: []
+  username:  "default"
+  groupname: "default"
+  files:
+  - name: "default.yml"
+    path: "/tmp"
+  root_dir:  "/tmp/default"
 
 apt:
   packages: []
   services: []
+  username:  "default"
+  groupname: "default"
+  files:
+  - name: "default.yml"
+    path: "/tmp"
+  root_dir:  "/tmp/default"
 
 yum:
   packages: []
   services: []
+  username:  "default"
+  groupname: "default"
+  files:
+  - name: "default.yml"
+    path: "/tmp"
+  root_dir:  "/tmp/default"
 
 {% raw %}conf: "{{ vars[ansible_pkg_mgr] | default({}) }}"{% endraw %}
 

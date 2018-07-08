@@ -41,33 +41,22 @@ ha01
 ha02
 ha03
 [arch-nodes:vars]
-source_image=archlinux-nyloxcloud-1.0.3-x86_64.img
-flavor=s1.large
 
 [ubuntu-nodes]
 #ha01
 #ha02
 #ha03
 [ubuntu-nodes:vars]
-source_image=xenial-server-cloudimg-amd64-disk1.img
-flavor=s1.large
-#ansible_user="toor"
 
 [centos-nodes]
 #ha01
 #ha02
 #ha03
 [centos-nodes:vars]
-source_image=CentOS-7-x86_64-GenericCloud.qcow2
-flavor=s1.large
-#ansible_user="toor"
 
 [cirros-nodes]
 #ha01
 #ha02
 #ha03
 [centos-nodes:vars]
-source_image=cirros-0.3.5-x86_64-disk.img
-flavor=s1.large
-ansible_user="cirros"
 {% endblock %}

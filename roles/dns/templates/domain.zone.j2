@@ -11,7 +11,8 @@ $TTL 86400
 {% endfor %}
 
 {% for node in groups['dns-nodes'] %}
-ns{{ loop.index }}     IN	A	{{ ips[cnc_net][node].ip }}
+{% set net = hostvars[node].cnc_net %}
+ns{{ loop.index }}     IN	A	{{ ips[net][node].ip }}
 {% endfor %}
 
 {% for node in groups['dns-nodes'] %}
@@ -20,7 +21,13 @@ ns{{ loop.index }}     IN	A	{{ ips[cnc_net][node].ip }}
 
 {% for node in groups['all'] %}
 {%   if node not in groups['dns-nodes'] %}
-{{ node }}      IN      A       {{ ips[cnc_net][node].ip }}
+{%     set net = hostvars[node].cnc_net %}
+{%     set ip = ips[net][node].ip %}
+{%     if ip | ipaddr('address') %}
+{{ node }}      IN      A       {{ ip }}
+{%     else %}
+; Failed adding ip '{{ ip }}' for node '{{ node }}'
+{%     endif %}
 {%   endif %}
 {% endfor %}
 

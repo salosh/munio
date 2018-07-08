@@ -2,8 +2,8 @@
 Name=br-{{ vnet }}
 
 [Network]
-DNS=8.8.8.8
-DNS=8.8.4.4
+DNS=1.1.1.1
+DNS=1.0.0.1
 {% if 'dhcp_external' in nets[vnet].tags %}
 DHCP=ipv4
 

@@ -1,19 +1,19 @@
 # Author: Salo Shp <saloshp@gmail.com>
 #
-#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#    This file is part of Munio. <https://github.com/salosh/munio.git>
 #
-#    Nylox is free software: you can redistribute it and/or modify
+#    Munio is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
 #    the Free Software Foundation, either version 3 of the License, or
 #    (at your option) any later version.
 #
-#    Nylox is distributed in the hope that it will be useful,
+#    Munio is distributed in the hope that it will be useful,
 #    but WITHOUT ANY WARRANTY; without even the implied warranty of
 #    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #    GNU General Public License for more details.
 #
 #    You should have received a copy of the GNU General Public License
-#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#    along with Munio.  If not, see <http://www.gnu.org/licenses/>.
 #
 
 ---
@@ -30,14 +30,12 @@
   tags:
   - clear
 
-- name: "Deploy network configuration"
+- name: "Deploy network configuration - networkd"
   vars:
-    iface:
-      name: "{{ item.ifnames[0] }}"
-      dhcp: "{{ 'dhcp' in item.tags }}"
-      net:  "{{ item.params.net | d('NA') }}"
+    net:  "{{ item.params.net | d('NA') }}"
+    node: "{{ inventory_hostname }}"
   template:
-    src:   "physical.network.j2"
+    src:   "{{ role_path }}/../mctx/templates/networkd.cfg.j2"
     dest:  "/etc/systemd/network/{{ item.ifnames[0] }}.network"
     owner: root
     group: root
@@ -45,6 +43,45 @@
     force: yes
   with_items:
   - "{{ allocations.byhost[inventory_hostname] }}"
+  when:
+  - "hostvars[inventory_hostname].network_service == 'networkd'"
+  tags:
+  - conf
+
+- name: "Deploy network configuration - ifcfg"
+  vars:
+    net:  "{{ item.params.net | d('NA') }}"
+    node: "{{ inventory_hostname }}"
+  template:
+    src:   "{{ role_path }}/../mctx/templates/ifcfg.j2"
+    dest:  "/etc/sysconfig/network-scripts/ifcfg-{{ item.ifnames[0] }}"
+    owner: root
+    group: root
+    mode:  "u=rw,g=r,o=r"
+    force: yes
+  with_items:
+  - "{{ allocations.byhost[inventory_hostname] }}"
+  when:
+  - "hostvars[inventory_hostname].network_service == 'ifcfg'"
+  tags:
+  - conf
+  - ifcfg
+
+- name: "Deploy network configuration - interfacesd"
+  vars:
+    net:  "{{ item.params.net | d('NA') }}"
+    node: "{{ inventory_hostname }}"
+  template:
+    src:   "{{ role_path }}/../mctx/templates/ifacesd.cfg.j2"
+    dest:  "/etc/network/interfaces.d/net_{{ net }}.cfg"
+    owner: root
+    group: root
+    mode:  "u=rw,g=r,o=r"
+    force: yes
+  with_items:
+  - "{{ allocations.byhost[inventory_hostname] }}"
+  when:
+  - "hostvars[inventory_hostname].network_service == 'interfacesd'"
   tags:
   - conf
 
@@ -70,10 +107,10 @@
   loop_control:
     loop_var: vnet
   with_items:
-  - "{{ nets.keys() }}"
+  - "{{ nets.keys() | sort | list }}"
   when:
   - "'virtbridge' in nets[vnet].tags"
-  - "inventory_hostname not in groups['virtual-nodes']"
+  - "inventory_hostname in groups['hypervisor-nodes']"
   tags:
   - conf
 
@@ -82,6 +119,8 @@
     content: "{{ networks | to_nice_yaml(indent=2) }}"
     dest: /etc/systemd/network/networks.yml
     mode: "u=rw,g=r,o=r"
+  when:
+  - "hostvars[inventory_hostname].network_service == 'networkd'"
   tags:
   - debug
 
@@ -92,6 +131,8 @@
     enabled: "{{ service_final.enabled }}"
   with_items:
   - "systemd-networkd"
+  when:
+  - "hostvars[inventory_hostname].network_service == 'networkd'"
   tags:
   - service
 
@@ -114,8 +155,8 @@
 # TODO XXX
 - name: "Disable service"
   service:
-    name: networking
-    state: stopped
+    name:    "{{ item }}"
+    state:   stopped
     enabled: no
   with_items:
   - networking

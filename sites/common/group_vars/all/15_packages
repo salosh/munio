@@ -1,19 +1,19 @@
 # Author: Salo Shp <saloshp@gmail.com>
 #
-#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#    This file is part of Munio. <https://github.com/salosh/munio.git>
 #
-#    Nylox is free software: you can redistribute it and/or modify
+#    Munio is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
 #    the Free Software Foundation, either version 3 of the License, or
 #    (at your option) any later version.
 #
-#    Nylox is distributed in the hope that it will be useful,
+#    Munio is distributed in the hope that it will be useful,
 #    but WITHOUT ANY WARRANTY; without even the implied warranty of
 #    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #    GNU General Public License for more details.
 #
 #    You should have received a copy of the GNU General Public License
-#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#    along with Munio.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Common variables file        
 # Packages definitions
@@ -32,7 +32,7 @@ pacman_pkg_group:
 #  - btrfs-progs
 #  - squashfs-tools
 #  - libisoburn
-#  - cdrtools
+  - cdrtools
   - parted
   - arch-install-scripts
   net:
@@ -60,6 +60,7 @@ pacman_pkg_group:
   - sudo
   - sshpass
   - openssh
+  - shadowsocks
   - cronie
   - rsync
   - dmidecode
@@ -80,6 +81,7 @@ pacman_pkg_group:
   - darkhttpd
   - iptables
   - ebtables
+  - libpsl
   monitor:
   - htop
   - iotop
@@ -90,9 +92,9 @@ pacman_pkg_group:
   - python
   - python-pip
   - python-netaddr
-#  - python2
-#  - python2-pip
-#  - python2-netaddr
+  - python2
+  - python2-pip
+  - python2-netaddr
   devops:
   - apache
   - dhcp
@@ -126,6 +128,9 @@ pacman_pkg_group:
   - virt-viewer
   - dnsmasq
   - mkisolinux
+  - libvirt
+  - libvirt-python
+  - libvirt-python2
 
 apt_pkg_group:
   boot:
@@ -187,7 +192,85 @@ apt_pkg_group:
   - git
   - jq
 
-yum_pkg_group: []
+yum_pkg_group:
+  boot: []
+  filesystem: []
+  net:
+  - bridge-utils
+  - nc
+  - tcpdump
+  - traceroute
+  tools:
+  - unzip
+  - bzip2
+  - zip
+  - curl
+  - iptables
+  - lsof
+  - man-db
+  - mc
+  - nano
+  - rsync
+  - screen
+  - strace
+  - tree
+  - uuid
+  - vim
+  - wget
+  - bash-completion
+  monitor:
+  - sysstat
+  python:
+  - python
+  devops:
+  - git
+
+xyum_pkg_group:
+  boot:
+  - grub2-efi-x64
+  - grub2-efi-x64-cdboot
+  - grub2-efi-x64-modules
+  - grub2-tools-efi
+  filesystem:
+  - ceph-common
+  - xfsprogs
+  net:
+  - bridge-utils
+  - nc
+  - tcpdump
+  - traceroute
+  - ntp
+  - ntpdate
+  tools:
+  - unzip
+  - bzip2
+  - zip
+  - curl
+  - java-1.8.0-openjdk
+  - iptables
+  - lsof
+  - man-db
+  - mariadb
+  - mc
+  - nano
+  - rsync
+  - screen
+  - strace
+  - tree
+  - uuid
+  - vim
+  - wget
+  - qemu-img
+  - qemu-kvm
+  - qemu-kvm-common
+  - qemu-kvm-tools
+  - bash-completion
+  monitor:
+  - sysstat
+  python:
+  - python
+  devops:
+  - git
 
 pkg_group: "{{ vars[ansible_pkg_mgr ~ '_pkg_group'] }}"
 

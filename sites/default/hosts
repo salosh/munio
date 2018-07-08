@@ -1,0 +1,77 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Munio. <https://github.com/salosh/munio.git>
+#
+#    Munio is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Munio is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Munio.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+# auto-generated hosts file for site 'default'
+[hypervisor-nodes]
+localhost ansible_connection=local
+
+[ha-nodes]
+ha01 node_id=1
+ha02 node_id=2
+ha03 node_id=3
+
+[ha-nodes:vars]
+group_id=0
+
+[dns-nodes:children]
+ha-nodes
+
+[lb-nodes:children]
+dns-nodes
+
+[consul-nodes:children]
+ha-nodes
+
+[http-nodes:children]
+hypervisor-nodes
+ha-nodes
+
+[elasticsearch-nodes:children]
+#hypervisor-nodes
+ha-nodes
+
+[redis-nodes:children]
+#hypervisor-nodes
+ha-nodes
+
+[virtual-nodes:children]
+ha-nodes
+
+[arch-nodes]
+ha01
+ha02
+ha03
+[arch-nodes:vars]
+
+[ubuntu-nodes]
+#ha01
+#ha02
+#ha03
+[ubuntu-nodes:vars]
+
+[centos-nodes]
+#ha01
+#ha02
+#ha03
+[centos-nodes:vars]
+
+[cirros-nodes]
+#ha01
+#ha02
+#ha03
+[centos-nodes:vars]

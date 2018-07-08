@@ -44,14 +44,14 @@
   shell:
     update-grub
   when:
-  - grub_cmdline | changed
+  - grub_cmdline is changed
   - "ansible_pkg_mgr == 'apt'"
 
 - name: "Apply GRUB settings for '{{ ansible_pkg_mgr }}'"
   shell:
     grub-mkconfig -o /boot/grub/grub.cfg
   when:
-  - grub_cmdline | changed
+  - grub_cmdline is changed
   - "ansible_pkg_mgr == 'pacman'"
 
 - name: "Apply GRUB settings for '{{ ansible_pkg_mgr }}'"

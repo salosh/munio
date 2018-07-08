@@ -8,13 +8,17 @@
 
 {% if nets is defined and nets.keys() | length > 0 %}
 {%   for net in nets.keys() | sort %}
-# Net '{{ net }}' hosts
-{%     for key in ips[net].keys() | sort %}
-{%       if ips[net][key] is mapping and 'ip' in ips[net][key].keys() and key != 'localhost' %}
-{%         if net != cnc_net %}# {% endif %}{{ ips[net][key].ip }}	{{ key }}.{{ fqdn }}	{{ key }}
+##### Net '{{ net }}'
+# {{ nets[net].cidr }} [{{ nets[net].hostmin }}-{{ nets[net].hostmax }}] / {{ nets[net].netmask }}
+{%     for hostname in ips[net].keys() | sort %}
+{%       if ips[net][hostname] is mapping and 'ip' in ips[net][hostname].keys() and hostname != 'localhost' %}
+{% if net != hostvars[hostname].cnc_net %}# {% endif %}{{ ips[net][hostname].ip }}	{{ hostname }}.{{ fqdn }}	{{ hostname }}
 {%       endif %}
 {%     endfor %}
 {%   endfor %}
 {% else %}
-127.0.0.1       {{ inventory_hostname }}.{{ domain_name}}   {{ inventory_hostname }}
+127.0.0.1       {{ inventory_hostname }}.{{ domain_name }}   {{ inventory_hostname }}
 {% endif %}
+
+127.0.0.127     detectportal.firefox.com
+

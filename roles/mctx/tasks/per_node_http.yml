@@ -1,19 +1,19 @@
 # Author: Salo Shp <saloshp@gmail.com>
 #
-#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#    This file is part of Munio. <https://github.com/salosh/munio.git>
 #
-#    Nylox is free software: you can redistribute it and/or modify
+#    Munio is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
 #    the Free Software Foundation, either version 3 of the License, or
 #    (at your option) any later version.
 #
-#    Nylox is distributed in the hope that it will be useful,
+#    Munio is distributed in the hope that it will be useful,
 #    but WITHOUT ANY WARRANTY; without even the implied warranty of
 #    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #    GNU General Public License for more details.
 #
 #    You should have received a copy of the GNU General Public License
-#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#    along with Munio.  If not, see <http://www.gnu.org/licenses/>.
 #
 
 ---
@@ -24,26 +24,25 @@
       {%- set subdirz = { 'dirz': [], 'linkz': [] } %}
       {%- set tmp = subdirz.dirz.append(prefix ~'/by-name/'~ node) %}
       {%- set tmp = subdirz.dirz.append(prefix ~'/by-name/'~ node ~ '/net') %}
-      {%- set tmp = subdirz.dirz.append(prefix ~'/by-name/'~ node ~ '/net/interfaces') %}
-      {%- set tmp = subdirz.dirz.append(prefix ~'/by-name/'~ node ~ '/net/ifcfg') %}
       {%- set tmp = subdirz.dirz.append(prefix ~'/by-name/'~ node ~ '/net/networkd') %}
+      {%- set tmp = subdirz.dirz.append(prefix ~'/by-name/'~ node ~ '/net/ifcfg') %}
+      {%- set tmp = subdirz.dirz.append(prefix ~'/by-name/'~ node ~ '/net/interfacesd') %}
       {%- set tmp = subdirz.dirz.append(prefix ~'/by-name/'~ node ~'/cidata') %}
-      {%-   set tmp = subdirz.linkz.append({ 'src': '../../nodes/by-name/'~ node ~'/cidata.iso', 'dest': '../dynamic/cidata/' ~ node ~ '.iso' }) %}
       {%- for group in hostvars[node].group_names %}
       {%-   set tmp = subdirz.dirz.append(prefix ~'/by-group/'~ group) %}
-      {%-   set tmp = subdirz.linkz.append({ 'src': '../../by-name/'~ node, 'dest': './by-group/'~ group ~ '/' ~ node}) %}
+      {%-   set tmp = subdirz.linkz.append('./by-group/'~ group ~ '/' ~ node) %}
       {%- endfor %}
       {%- if 'ansible_product_uuid' in hostvars[node].keys() %}
       {%-   set serial = hostvars[node].ansible_product_uuid %}
-      {%-   set tmp = subdirz.linkz.append({ 'src': '../by-name/'~ node, 'dest': './by-serial/' ~ serial }) %}
+      {%-   set tmp = subdirz.linkz.append('./by-serial/' ~ serial) %}
       {%- endif %}
       {%- if 'mac' in hostvars[node].keys() %}
       {%-   set mac = hostvars[node].mac %}
-      {%-   set tmp = subdirz.linkz.append({ 'src': '../by-name/'~ node, 'dest': './by-mac/' ~ mac | replace(':', '-') }) %}
+      {%-   set tmp = subdirz.linkz.append('./by-mac/' ~ (mac | replace(':', '-'))) %}
       {%- endif %}
-      {%- for net in nets.keys() | sort %}
+      {%- for net in nets.keys() | list | sort %}
       {%-   if 'vmacs' in nets[net].keys() %}
-      {%-     set tmp = subdirz.linkz.append({ 'src': '../by-name/'~ node, 'dest': './by-mac/' ~ nets[net].vmacs.byname[node] | replace(':', '-') }) %}
+      {%-     set tmp = subdirz.linkz.append('./by-mac/' ~ (nets[net].vmacs.byname[node] | replace(':', '-'))) %}
       {%-   endif %}
       {%- endfor %}
       {{- (subdirz) -}}
@@ -55,21 +54,19 @@
     owner: "{{ conf.username }}"
     group: "{{ conf.username }}"
     mode:  "u=rwx,g=rx,o=rx"
-  with_items:
-  - "{{- mctx_http_subdirs.dirz | list | unique | sort -}}"
+  loop: "{{- mctx_http_subdirs.dirz | list | unique | sort -}}"
 
 - name: "{{ node }} :: Deploy interfaces.d configuration"
   template:
     src: "ifacesd.cfg.j2"
-    dest:  "{{ conf.root_dir }}/nodes/by-name/{{ node }}/net/interfaces/net_{{ net }}.cfg"
+    dest:  "{{ conf.root_dir }}/nodes/by-name/{{ node }}/net/interfacesd/net_{{ net }}.cfg"
     owner: "{{ conf.username }}"
     group: "{{ conf.username }}"
     mode:  "u=rwx,g=rx,o=rx"
     force: yes
   loop_control:
     loop_var: "net"
-  with_items:
-  - "{{ nets.keys() | sort }}"
+  loop: "{{ nets.keys() | list | sort }}"
   tags:
   - conf
 
@@ -83,8 +80,7 @@
     force: yes
   loop_control:
     loop_var: "net"
-  with_items:
-  - "{{ nets.keys() | sort }}"
+  loop: "{{ nets.keys() | list | sort }}"
   tags:
   - conf
 
@@ -98,8 +94,7 @@
     force: yes
   loop_control:
     loop_var: "net"
-  with_items:
-  - "{{ nets.keys() | sort }}"
+  loop: "{{ nets.keys() | list | sort }}"
   tags:
   - conf
 
@@ -112,7 +107,7 @@
     group: "{{ conf.username }}"
     mode:  "u=rwx,g=rx,o=rx"
     force: yes
-  with_items:
+  loop:
   - user-data
   - meta-data
   tags:
@@ -121,8 +116,18 @@
 - name: "{{ node }} :: Create cidata ISO file for"
   shell:
     "{{ item }}"
-  with_items:
+  loop:
   - "mkisofs -o '{{ conf.root_dir }}/nodes/by-name/{{ node }}/cidata.iso' -V cidata -r -J {{ conf.root_dir }}/nodes/by-name/{{ node }}/cidata"
+
+- name: "{{ node }} :: Create cidata ISO link for convenienvce"
+  file:
+    src: "../../nodes/by-name/{{ node }}/cidata.iso"
+    dest: "{{ conf.root_dir }}/dynamic/cidata/{{ node }}.iso"
+    state: link
+    owner: "{{ conf.username }}"
+    group: "{{ conf.username }}"
+    mode:  "u=rwx,g=rx,o=rx"
+    force: yes
 
 - name: "{{ node }} :: Deploy Yaml host vars"
   copy:
@@ -150,7 +155,7 @@
     group:   "{{ conf.username }}"
     mode:    "u=rwx,g=rx,o=rx"
     force:   yes
-  with_items:
+  loop:
   - {'source_var': 'inventory_hostname'   , 'target_file': 'hostname' }
   - {'source_var': 'mac'                  , 'target_file': 'mac'      }
   - {'source_var': 'ansible_product_uuid' , 'target_file': 'serial'   }
@@ -168,13 +173,11 @@
 
 - name: "{{ node }} :: Create http sublinks"
   file:
-    src: "{{ item.src }}"
-    dest: "{{ conf.root_dir }}/nodes/{{ item.dest }}"
+    src: "../../by-name/{{ node }}"
+    dest: "{{ conf.root_dir }}/nodes/{{ item }}"
     state: link
     owner: "{{ conf.username }}"
     group: "{{ conf.username }}"
     mode:  "u=rwx,g=rx,o=rx"
     force: yes
-  with_items:
-  - "{{ mctx_http_subdirs.linkz | list | sort }}"
-
+  loop: "{{ mctx_http_subdirs.linkz | list | sort }}"

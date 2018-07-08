@@ -1,22 +1,24 @@
 # Author: Salo Shp <saloshp@gmail.com>
 #
-#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#    This file is part of Munio. <https://github.com/salosh/munio.git>
 #
-#    Nylox is free software: you can redistribute it and/or modify
+#    Munio is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
 #    the Free Software Foundation, either version 3 of the License, or
 #    (at your option) any later version.
 #
-#    Nylox is distributed in the hope that it will be useful,
+#    Munio is distributed in the hope that it will be useful,
 #    but WITHOUT ANY WARRANTY; without even the implied warranty of
 #    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #    GNU General Public License for more details.
 #
 #    You should have received a copy of the GNU General Public License
-#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#    along with Munio.  If not, see <http://www.gnu.org/licenses/>.
 #
 
 ---
+# TODO FIXME XXX
+# mone tags to includeed tasks
 - name: "Deploy package manager configuration"
   include_tasks: "{{ role_path }}/../common/tasks/{{ ansible_pkg_mgr }}/conf.yml"
   tags:
@@ -24,6 +26,7 @@
 
 - name: "Deploy repositories"
   include_tasks: "{{ role_path }}/../common/tasks/{{ ansible_pkg_mgr }}/repos.yml"
+#  when: false
   tags:
   - bin
 
@@ -34,9 +37,9 @@
 
 - name: "Install packages"
   vars:
-    packages: "{{ pkg_group[item] }}"
+    packages: "{{ pkg_group[pkg_group_name] }}"
   include_tasks: "{{ role_path }}/../common/tasks/{{ ansible_pkg_mgr }}/package.yml"
-  with_items:
+  loop:
   - boot
   - filesystem
   - net
@@ -47,8 +50,9 @@
 #  - ui
 #  - virt
   loop_control:
-    label: "{{ pkg_group[item] | list | sort | unique | join(',') }}"
+    label: "{{ pkg_group[pkg_group_name] | list | sort | unique | join(',') }}"
+    loop_var: "pkg_group_name"
   when:
-  - "item in pkg_group.keys()"
+  - "pkg_group_name in pkg_group.keys()"
   tags:
   - bin

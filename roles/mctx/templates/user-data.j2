@@ -1,32 +1,33 @@
 #cloud-config
 #
-#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#    This file is part of Munio. <https://github.com/salosh/munio.git>
 #
-#    Nylox is free software: you can redistribute it and/or modify
+#    Munio is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
 #    the Free Software Foundation, either version 3 of the License, or
 #    (at your option) any later version.
 #
-#    Nylox is distributed in the hope that it will be useful,
+#    Munio is distributed in the hope that it will be useful,
 #    but WITHOUT ANY WARRANTY; without even the implied warranty of
 #    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #    GNU General Public License for more details.
 #
 #    You should have received a copy of the GNU General Public License
-#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#    along with Munio.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Auto user-data for node '{{ node }}'
 #
 chpasswd:
   list: |
     root:{{ default_password }}
+    toor:{{ default_password }}
   expire: False
 
 users:
   - default
   - name: toor
     gecos: Toor
-    sudo: ALL=(ALL) NOPASSWD:ALL
+    sudo: ['ALL=(ALL) NOPASSWD:ALL']
     groups: users, admin
     ssh-import-id: None
     lock_passwd: true
@@ -41,7 +42,92 @@ packages:
  - python-minimal
  - rsync
  - openssh-server
+
+write_files:
+-   content: |
+        Acquire::http::Proxy "{{ proxy.protocol }}://{{ proxy.host }}:{{ proxy.port }}";
+    path: /etc/apt/apt.conf.d/05-http-proxy
+-   content: |
+        Acquire::http::Proxy "{{ proxy.protocol }}://{{ proxy.host }}:{{ proxy.port }}";
+    path: /etc/apt/apt.conf.d/05-https-proxy
 {% endif %}
 
+{% if 'centos-nodes' in hostvars[node].group_names %}
+packages:
+ - nano
+
+write_files:
+  - path: /etc/yum.repos.d/CentOS-Base.repo
+    owner: root:root
+    permissions: '0444'
+    content: |
+      # installed by cloud-init
+      [base]
+      name=CentOS-$releasever - Base
+      baseurl=http://mirror.centos.org/centos/$releasever/os/$basearch/
+      gpgcheck=1
+      gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7
+
+      #released updates 
+      [updates]
+      name=CentOS-$releasever - Updates
+      baseurl=http://mirror.centos.org/centos/$releasever/updates/$basearch/
+      gpgcheck=1
+      gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7
+
+      #additional packages that may be useful
+      [extras]
+      name=CentOS-$releasever - Extras
+      baseurl=http://mirror.centos.org/centos/$releasever/extras/$basearch/
+      gpgcheck=1
+      gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7
+  - path: /etc/yum.conf
+    content: |
+      [main]
+      cachedir=/var/cache/yum/$basearch/$releasever
+      keepcache=0
+      debuglevel=2
+      logfile=/var/log/yum.log
+      exactarch=1
+      obsoletes=1
+      gpgcheck=1
+      plugins=1
+      installonly_limit=5
+      bugtracker_url=http://bugs.centos.org/set_project.php?project_id=23&ref=http://bugs.centos.org/bug_report_page.php?category=yum
+      distroverpkg=centos-release
+
+      #  This is the default, if you make this bigger yum won't see if the metadata
+      # is newer on the remote and so you'll "gain" the bandwidth of not having to
+      # download the new metadata and "pay" for it by yum not having correct
+      # information.
+      #  It is esp. important, to have correct metadata, for distributions like
+      # Fedora which don't keep old packages around. If you don't like this checking
+      # interupting your command line usage, it's much better to have something
+      # manually check the metadata once an hour (yum-updatesd will do this).
+      # metadata_expire=90m
+
+      # PUT YOUR REPOS HERE OR IN separate files named file.repo
+      # in /etc/yum.repos.d
+
+      proxy={{ proxy.protocol }}://{{ proxy.host }}:{{ proxy.port }}
+
+{% endif %}
+
+{% if connectivity_mode == 'online' %}
 package_update: true
 package_upgrade: true
+{% endif %}
+
+manage_resolv_conf: true
+
+resolv_conf:
+  nameservers:
+  - {{ proxy.host }}
+  searchdomains:
+    - {{ domain_name }}
+#  domain: {{ domain_name }}
+  options:
+    rotate: true
+    timeout: 1
+
+manage_etc_hosts: True
