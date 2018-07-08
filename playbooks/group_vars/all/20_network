@@ -87,6 +87,9 @@ ips: |
   {%   set tmp = ipz[key].update({'macs':  {} })                                          %}
   {%   set tmp = ipz[key].update({'vmacs': {} })                                          %}
   {%   for host in groups['all']                                                          %}
+  {%   if key not in allocations.bynet or not host in allocations.bynet[key].keys()       %}
+  {%     continue                                                                         %}
+  {%   endif                                                                              %}
   {%     set hvars = hostvars[host]                                                       %}
   {%     set node_id  = '%02d' % (hvars['node_id']  | d(0)) | int                         %}
   {%     set group_id = '%02d' % (hvars['group_id'] | d(0)) | int                         %}
