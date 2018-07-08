@@ -1,19 +1,19 @@
 # Author: Salo Shp <saloshp@gmail.com>
 #
-#    This file is part of Nylox. <https://github.com/nylox/nylox.git>
+#    This file is part of Munio. <https://github.com/salosh/munio.git>
 #
-#    Nylox is free software: you can redistribute it and/or modify
+#    Munio is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
 #    the Free Software Foundation, either version 3 of the License, or
 #    (at your option) any later version.
 #
-#    Nylox is distributed in the hope that it will be useful,
+#    Munio is distributed in the hope that it will be useful,
 #    but WITHOUT ANY WARRANTY; without even the implied warranty of
 #    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #    GNU General Public License for more details.
 #
 #    You should have received a copy of the GNU General Public License
-#    along with Nylox.  If not, see <http://www.gnu.org/licenses/>.
+#    along with Munio.  If not, see <http://www.gnu.org/licenses/>.
 #
 # Auto DHCP configuration for '{{ net }}' network.
 #
@@ -29,7 +29,7 @@ subnet {{ nets[net].network }} netmask {{ nets[net].netmask }} {
     option subnet-mask      {{ nets[net].netmask }};
     option routers          {{ nets[net].gateway }};
     next-server             {{ nets[net].gateway }};
-    option domain-name-servers 8.8.8.8, 8.8.4.4;
+    option domain-name-servers 1.1.1.1, 1.0.0.1;
 {%   if 'pxe' in nets[net].tags %}
     class "pxeclients" {
         match if substring (option vendor-class-identifier, 0, 9) = "PXEClient";
@@ -52,14 +52,17 @@ subnet {{ nets[net].network }} netmask {{ nets[net].netmask }} {
 # Virtual hosts group
 group {
 {%   for host in groups['all'] | sort %}
-{%     set mac = ips[net][host].vmac | default('ERROR') %}
+{%     if net not in allocations.bynet or not host in allocations.bynet[net].keys() %}
+{%       continue                                                                   %}
+{%     endif                                                                        %}
+{%     set mac = ips[net][host].vmac | default('ERROR')                             %}
     host {{ net }}--{{ host }}--{{ mac.replace(':', '-') }} {
         hardware ethernet       {{ mac }};
         fixed-address           {{ ips[net][host].ip }};
         server-name             "{{ host }}.{{ fqdn }}";
         option host-name        "{{ host }}.{{ fqdn }}";
     }
-{%   endfor %}
+{%   endfor                                                                         %}
 }
 
 # physical hosts group

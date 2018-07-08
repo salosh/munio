@@ -22,6 +22,12 @@ ns{{ loop.index }}     IN	A	{{ ips[net][node].ip }}
 {% for node in groups['all'] %}
 {%   if node not in groups['dns-nodes'] %}
 {%     set net = hostvars[node].cnc_net %}
+{%     if net not in allocations.bynet or not node in allocations.bynet[net].keys() %}
+{%       if trace_mode is defined and trace_mode | bool                               %}
+; Skipped node '{{ node }}'
+{%       endif                                                                        %}
+{%       continue                                                                   %}
+{%     endif     %}
 {%     set ip = ips[net][node].ip %}
 {%     if ip | ipaddr('address') %}
 {{ node }}      IN      A       {{ ip }}
