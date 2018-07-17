@@ -38,6 +38,18 @@
   - conf 
   - auth
 
+- name: "Create configuration directories"
+  file:
+    path:  "/etc/sudoers.d"
+    state: "directory"
+    owner: "root"
+    group: "root"
+    mode:  "u=rwx,g=rx,o="
+    force: yes
+  tags:
+  - conf
+  - auth
+
 - name: "Deploy sudoers configuration for '{{ sshauth_remote_user }}'"
   remote_user: "{{ sshauth_remote_user }}"
   become: yes
