@@ -197,7 +197,7 @@
     loop_var: "iteritem"
   when:
   - lb_services[iteritem].apply_to | default('') in group_names
-  - "service_discovery_provider == 'consul'"
+  - "service_discovery_provider == 'consul' or iteritem == 'vault'"
   tags:
   - conf
 

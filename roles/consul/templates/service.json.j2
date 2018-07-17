@@ -37,17 +37,17 @@
 {% if 'bind_port' in svc.keys() %}
     "port": {{ svc.bind_port }},
 {% endif %}
-    "enableTagOverride": false,
+    "enable_tag_override": false,
     "checks": [
       {
         "id": "cwu-{{ iteritem }}",
         "name": "Service '{{ iteritem }}' health-check",
 {% if 'watch_script' in svc.keys() %}
-        "script": "{{ svc.watch_script }}",
+        "args": ["{{ svc.watch_script }}"],
 {% elif 'bind_process' in svc.keys() %}
-        "script": "/usr/bin/cwu -p {{ svc.bind_process }}",
+        "args": ["/usr/bin/cwu -p {{ svc.bind_process }}"],
 {% elif 'bind_port' in svc.keys() %}
-        "script": "/usr/bin/cwu -s {{ svc.bind_port }} {% if 'bind_protocol' in svc.keys() %}-i {{ svc.bind_protocol }}{% endif %}",
+        "args": ["/usr/bin/cwu -s {{ svc.bind_port }} {% if 'bind_protocol' in svc.keys() %}-i {{ svc.bind_protocol }}{% endif %}"],
 {% endif %}
         "interval": "{{ svc.interval | default('30s') }}"
       }

@@ -28,16 +28,32 @@ conf:
 
 consul_config_mode: client
 consul_log_level: INFO
-consul_version: "1.1.0"
+consul_version: "1.2.1"
 consul_download_uri: "https://releases.hashicorp.com/consul/{{ consul_version }}"
 
-requirements:
+requirements_amd64:
   binary:
     type:        "uri"
-    name:        "consul_{{ consul_version }}_linux_amd64.zip" 
+    name:        "consul_{{ consul_version }}_linux_amd64.zip"
     remote_path: "{{ consul_download_uri }}/consul_{{ consul_version }}_linux_amd64.zip"
     local_path:  "{{ dir_reqs }}/consul_{{ consul_version }}_linux_amd64.zip"
-    sha256:      "09c40c8b5be868003810064916d8460bff334ccfb59a5046390224b27e052c45"
+    sha256:      "e4146334be453146890023303da3e0c815669e108a18fb7d742745df3414a31a"
+
+requirements_armv7l:
+  binary:
+    type:        "uri"
+    name:        "consul_{{ consul_version }}_linux_arm.zip"
+    remote_path: "{{ consul_download_uri }}/consul_{{ consul_version }}_linux_arm.zip"
+    local_path:  "{{ dir_reqs }}/consul_{{ consul_version }}_linux_arm.zip"
+    sha256:      "e3d8ceaefd51afd72ff9e8b820d640dbf95d829c39951142b8fdd5b6e9852010"
+
+requirements: |
+  {% if ansible_architecture == 'armv7l' %}
+  {%   set reqz = requirements_armv7l %}
+  {% elif ansible_architecture == 'x86_64' %}
+  {%   set reqz = requirements_amd64 %}
+  {% endif %}
+  {{ (reqz) }}
 
 bind_host: "{{ ips[cnc_net][inventory_hostname].ip }}"
 #bind_port: ""
