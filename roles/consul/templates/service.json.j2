@@ -43,11 +43,12 @@
         "id": "cwu-{{ iteritem }}",
         "name": "Service '{{ iteritem }}' health-check",
 {% if 'watch_script' in svc.keys() %}
-        "args": ["{{ svc.watch_script }}"],
+{%   set script = (svc.watch_script).split(' ') | join('", "') %}
+        "args": ["{{ script }}"],
 {% elif 'bind_process' in svc.keys() %}
-        "args": ["/usr/bin/cwu -p {{ svc.bind_process }}"],
+        "args": ["/usr/bin/cwu", "-p", "{{ svc.bind_process }}"],
 {% elif 'bind_port' in svc.keys() %}
-        "args": ["/usr/bin/cwu -s {{ svc.bind_port }} {% if 'bind_protocol' in svc.keys() %}-i {{ svc.bind_protocol }}{% endif %}"],
+        "args": ["/usr/bin/cwu", "-s", "{{ svc.bind_port }}" {% if 'bind_protocol' in svc.keys() %},"-i", "{{ svc.bind_protocol }}"{% endif %}],
 {% endif %}
         "interval": "{{ svc.interval | default('30s') }}"
       }
