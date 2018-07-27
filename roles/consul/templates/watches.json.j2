@@ -21,13 +21,13 @@
     {
       "type": "service",
       "service": "{{ service }}",
-      "handler": "/usr/bin/cwu -l journal"
+      "args": ["/usr/bin/cwu", "-l", "/dev/null"]
     },
 {% endfor %}
     {
       "type": "checks",
       "state": "critical",
-      "handler": "/usr/bin/cwu -l journal"
+      "args": ["/usr/bin/cwu", "-l", "journal"]
     }
   ]
 }
