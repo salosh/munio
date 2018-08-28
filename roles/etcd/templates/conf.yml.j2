@@ -56,7 +56,8 @@ discovery-fallback: 'proxy'
 discovery-proxy:
 
 # DNS domain used to bootstrap initial cluster.
-discovery-srv:
+# Don't specify more than one discovery options, 'initial-cluster' is more than enough
+#discovery-srv: {{ domain_name }}
 
 # Initial cluster configuration for bootstrapping.
 {% set etcd_initial_cluster = [] %}
