@@ -79,73 +79,89 @@ ips: |
   {% set ipz = {}                                                                         %}
   {% set cols_detection = []                                                              %}
   {% set cols_detected = []                                                               %}
-  {% for key in nets.keys() | sort                                                        %}
+  {% for key in nets.keys() | list | sort                                                 %}
   {%   set net_tags = nets[key].tags | default([])                                        %}
-  {%   if not 'assign' in net_tags %}{% continue %}{% endif                               %}
+  {#   if not 'assign' in net_tags %}{% continue %}{% endif                               #}
   {%   set cidr = nets[key].cidr                                                          %}
   {%   set tmp = ipz.update({key: {} })                                                   %}
-  {%   set tmp = ipz[key].update({'macs':  {} })                                          %}
-  {%   set tmp = ipz[key].update({'vmacs': {} })                                          %}
-  {%   for host in groups['all']                                                          %}
-  {%   if key not in allocations.bynet or not host in allocations.bynet[key].keys()       %}
-  {%     continue                                                                         %}
-  {%   endif                                                                              %}
+  {%   set tmp = ipz[key].update({'macs':   {} })                                         %}
+  {%   set tmp = ipz[key].update({'vmacs':  {} })                                         %}
+  {%   set tmp = ipz[key].update({'errors': [] })                                         %}
+  {%   for host in groups['all'] | list | sort                                            %}
   {%     set hvars = hostvars[host]                                                       %}
-  {%     set node_id  = '%02d' % (hvars['node_id']  | d(0)) | int                         %}
-  {%     set group_id = '%02d' % (hvars['group_id'] | d(0)) | int                         %}
-  {%     set rack_id =  '%02d' % (hvars['rack_id']  | d(0)) | int                         %}
-  {%     set offset = { 'groupid': [0], 'nodeid': [0], 'rackid': [0]}                     %}
-  {%     set pfx = 'ofst_'                                                                %}
-  {%     for ofst_key in offset.keys() | sort                                             %}
-  {# ------------------------------------------------------------------------------------ #}
-  {%       if (pfx ~ ofst_key) in networks[key].keys()                                    %}
-  {%         set tmp = offset[ofst_key].append(networks[key][pfx ~ ofst_key])             %}
-  {%       endif                                                                          %}
-  {# ------------------------------------------------------------------------------------ #}
-  {# ------------------------------------------------------------------------------------ #}
-  {%       if (pfx ~ ofst_key) in hvars                                                   %}
-  {%         set tmp = offset[ofst_key].append(hvars[pfx ~ ofst_key])                     %}
-  {%       endif                                                                          %}
-  {# ------------------------------------------------------------------------------------ #}
-  {%     endfor                                                                           %}
-  {%     set by_groupid = (offset.groupid[-1] | int) * group_id | int                     %}
-  {%     set by_nodeid = (offset.nodeid[-1] | int) * node_id | int                        %}
-  {%     set by_rackid = (offset.rackid[-1] | int) * rack_id | int                        %}
-  {%     set ofst_hostmin = nets[key].hostmin | ipaddr('int')                             %}
-  {%     set ofst_netmin = cidr | ipaddr('1') | ipaddr('address') | ipaddr('int')         %}
-  {%     if ofst_hostmin != ofst_netmin                                                   %}
-  {%       set ofst_min = ofst_hostmin - ofst_netmin                                      %}
+  {%     if 'ip_' + key in hvars                                                          %}
+  {%       set ip = hvars['ip_' + key]                                                    %}
+  {%     elif key not in allocations.bynet or not host in allocations.bynet[key].keys()   %}
+  {%       set ip = 'UNASSIGNED'                                                          %}
   {%     else                                                                             %}
-  {%       set ofst_min = 0                                                               %}
+  {%       set node_id  = '%02d' % (hvars['node_id']  | d(0)) | int                       %}
+  {%       set group_id = '%02d' % (hvars['group_id'] | d(0)) | int                       %}
+  {%       set rack_id =  '%02d' % (hvars['rack_id']  | d(0)) | int                       %}
+  {%       set offset = { 'groupid': [0], 'nodeid': [0], 'rackid': [0]}                   %}
+  {%       set pfx = 'ofst_'                                                              %}
+  {%       for ofst_key in offset.keys() | sort                                           %}
+  {# ------------------------------------------------------------------------------------ #}
+  {%         if (pfx ~ ofst_key) in networks[key].keys()                                  %}
+  {%           set tmp = offset[ofst_key].append(networks[key][pfx ~ ofst_key])           %}
+  {%         endif                                                                        %}
+  {# ------------------------------------------------------------------------------------ #}
+  {# ------------------------------------------------------------------------------------ #}
+  {%         if (pfx ~ ofst_key) in hvars                                                 %}
+  {%           set tmp = offset[ofst_key].append(hvars[pfx ~ ofst_key])                   %}
+  {%         endif                                                                        %}
+  {# ------------------------------------------------------------------------------------ #}
+  {%       endfor                                                                         %}
+  {%       set by_groupid = (offset.groupid[-1] | int) * group_id | int                   %}
+  {%       set by_nodeid = (offset.nodeid[-1] | int) * node_id | int                      %}
+  {%       set by_rackid = (offset.rackid[-1] | int) * rack_id | int                      %}
+  {%       set ofst_hostmin = nets[key].hostmin | ipaddr('int')                           %}
+  {%       set ofst_netmin = cidr | ipaddr('1') | ipaddr('address') | ipaddr('int')       %}
+  {%       if ofst_hostmin != ofst_netmin                                                 %}
+  {%         set ofst_min = ofst_hostmin - ofst_netmin                                    %}
+  {%       else                                                                           %}
+  {%         set ofst_min = 0                                                             %}
+  {%       endif                                                                          %}
+  {%       set ofst = hvars['ofst'] | d(ofst_min + by_groupid + by_nodeid + by_rackid)    %}
+  {%       set ip = cidr | ipaddr(ofst) | ipaddr('address')                               %}
   {%     endif                                                                            %}
-  {%     set ofst = hvars['ofst'] | d(ofst_min + by_groupid + by_nodeid + by_rackid)      %}
-  {%     set ip = hvars['ip_' + key] | d(cidr | ipaddr(ofst) | ipaddr('address'))         %}
-  {%     set ip_verified = ip | ipaddr(cidr) | ipaddr('address')                          %}
-  {%       set ip_record = (host ~' - '~ ip)                                              %}
-  {%     if ip not in cols_detection                                                      %}
-  {%       set tmp = cols_detection.append(ip)                                            %}
-  {%     else                                                                             %}
+  {%     set ip_verified = ip | ipaddr(cidr) | ipaddr('address') | default(False)         %}
+  {%     set ip_record = (host ~' - '~ ip)                                                %}
+  {%     if ip_verified and ip_verified not in cols_detection                             %}
+  {%       set tmp = cols_detection.append(ip_verified)                                   %}
+  {%     elif ip != 'UNASSIGNED'                                                          %}
   {%       set tmp = cols_detected.append(ip_record)                                      %}
-  {%       set tmp = ipz[key].update({'collisions': cols_detected | sort| list |unique }) %}
+  {%       set tmp = ipz[key].errors.extend(cols_detected | sort | list | unique)         %}
   {%     endif                                                                            %}
   {%     set host_entry = {}                                                              %}
   {%     if (ip_verified and ip_record not in cols_detected) or 'unverified' in net_tags  %}
-  {%       set tmp = host_entry.update({'ip': ip })                                       %}
+  {%       set tmp = host_entry.update({'ip': ip_verified })                              %}
   {%     else                                                                             %}
   {%       set tmp = host_entry.update({'ip': False })                                    %}
   {%     endif                                                                            %}
   {%     set tmp = host_entry.update({'cidr': cidr })                                     %}
-  {%     set mac = ['52', '54', '00']                                                     %}
-  {%     set tmp = mac.append( '%02x' % (nets[key].idx)  | int )                          %}
-  {%     set tmp = mac.append( '%02x' % (group_id) | int )                                %}
-  {%     set tmp = mac.append( '%02x' % (node_id)  | int )                                %}
-  {%     set vmac = mac | join(':')                                                       %}
-  {%     set tmp = host_entry.update({'vmac': vmac })                                     %}
-  {%     set tmp = ipz[key].vmacs.update(  {vmac: host })                                 %}
+  {# ------------------------------------------------------------------------------------ #}
+  {%     if ip != 'UNASSIGNED'                                                            %}
+  {%       set mac_prefix = ['52', '54', '00']                                            %}
+  {%       set mac = mac_prefix | list                                                    %}
+  {%       set tmp = mac.append( '%02x' % (nets[key].idx)  | int )                        %}
+  {%       set tmp = mac.append( '%02x' % (group_id) | int )                              %}
+  {%       set tmp = mac.append( '%02x' % (node_id)  | int )                              %}
+  {%       set vmac = mac | join(':')                                                     %}
+  {%       if vmac in ipz[key].vmacs                                                      %}
+  {%         set rnd1 = '%02x' % (range(1, 255) | random)                                 %}
+  {%         set rnd2 = '%02x' % (range(1, 255) | random)                                 %}
+  {%         set tmp = mac_prefix.extend(['ff', rnd1, rnd2])                              %}
+  {%         set vmac = mac_prefix | join(':')                                            %}
+  {%       endif                                                                          %}
+  {%       set tmp = host_entry.update({'vmac': vmac })                                   %}
+  {%       set tmp = ipz[key].vmacs.update(  {vmac: host })                               %}
+  {%     endif                                                                            %}
+  {# ------------------------------------------------------------------------------------ #}
   {%     if 'mac' in hvars                                                                %}
   {%       set tmp = host_entry.update({'mac': hvars.mac })                               %}
   {%       set tmp = ipz[key].macs.update( {hvars.mac: host })                            %}
   {%     endif                                                                            %}
+  {# ------------------------------------------------------------------------------------ #}
   {%     if trace_mode is defined and trace_mode | bool                                   %}
   {%       set tmp = host_entry.update({'ofst_min': ofst_min })                           %}
   {%       set tmp = host_entry.update({'group_id': group_id })                           %}
@@ -154,16 +170,11 @@ ips: |
   {%       set tmp = host_entry.update({'ofst': ofst })                                   %}
   {%       set tmp = host_entry.update({'offset': offset })                               %}
   {%     endif                                                                            %}
+  {# ------------------------------------------------------------------------------------ #}
   {%     set tmp = ipz[key].update({host: host_entry })                                   %}
   {#     set tmp = hostvars[host].update({'ips': ipz})                                    #}
   {%   endfor                                                                             %}
   {% endfor                                                                               %}
   {{ (ipz) }}
 
-cnc_ip: "{{ ips[cnc_net][inventory_hostname].ip }}"
-
-proxy:
-  enabled: true
-  protocol: "http"
-  host: "{{ nets[cnc_net].gateway }}"
-  port: 3142
+cnc_ip: "{{ ips[ hostvars[inventory_hostname].cnc_net ][inventory_hostname].ip }}"

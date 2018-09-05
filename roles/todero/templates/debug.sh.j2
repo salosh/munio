@@ -1,0 +1,14 @@
+#!/bin/bash
+
+export SVC=${1:?"Service name required"}
+
+echo " ### ETCD ###"
+ETCDCTL_API=3 etcdctl get "/todero/lb/service/${SVC}/ha01"
+echo "-------------------------------------------------"
+echo " ### COREDNS ### "
+nslookup ${SVC}.service.lb -port=5453
+echo "-------------------------------------------------"
+echo " ### NAMED ### "
+nslookup ${SVC}.service.lb -port=53
+echo "-------------------------------------------------"
+

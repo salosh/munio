@@ -129,4 +129,13 @@
     mode: "u=rw,g=r,o=r"
     force: no
 
+- name: "Create link to common hosts file"
+  file:
+    src:   "../common/hosts"
+    dest:  "{{ root_dir }}/common_hosts"
+    state: link
+    owner: "root"
+    group: "root"
+    mode:  "u=rwx,g=rx,o=rx"
+    force: yes
 

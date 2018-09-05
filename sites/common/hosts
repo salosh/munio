@@ -1,0 +1,76 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Munio. <https://github.com/salosh/munio.git>
+#
+#    Munio is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Munio is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Munio.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+# auto-generated hosts file for site 'common'
+[hypervisor-nodes]
+
+[ha-nodes]
+
+[client-nodes]
+
+[dns-nodes]
+
+[lb-nodes]
+
+[consul-nodes]
+
+[vault-nodes]
+
+[etcd-nodes]
+
+[http-nodes]
+
+[elasticsearch-nodes]
+
+[redis-nodes]
+
+[mariadb-nodes]
+
+[glusterfs-nodes]
+
+[ldapserver-nodes]
+
+[ldapclient-nodes]
+
+[kerberosserver-nodes]
+
+[kerberosclient-nodes]
+
+[rootca-nodes]
+
+[rabbitmq-nodes]
+ 
+[kubernetes-nodes]
+
+[todero-nodes]
+
+[virtual-nodes]
+
+[arch-nodes]
+
+[ubuntu-nodes]
+
+[centos-nodes]
+
+[cirros-nodes]
+
+[alpine-nodes]
+
+#[chroot-nodes]
+#/mnt/ansible ansible_connection=chroot
+

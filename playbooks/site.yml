@@ -31,7 +31,7 @@
 - import_playbook: "./coredns.yml"
 - import_playbook: "./todero.yml"
 - import_playbook: "./ldap.yml"
-#- import_playbook: "./kerberos.yml"
+- import_playbook: "./kerberos.yml"
 - import_playbook: "./vault.yml"
 
 
