@@ -57,11 +57,12 @@
   tags:
   - conf
 
+#    host={{ ips[cnc_net][inventory_hostname].ip }}
 - name: "Wait for nodes to complete reboot"
   local_action:
     wait_for
-    host={{ ips[cnc_net][inventory_hostname].ip }}
-    port=22
+    host={{ hostvars[inventory_hostname].ansible_host }}
+    port={{ hostvars[inventory_hostname].ansible_port }}
     search_regex="OpenSSH"
     delay=30
     timeout=541

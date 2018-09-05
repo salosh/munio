@@ -75,3 +75,7 @@ ha03
 #ha02
 #ha03
 [centos-nodes:vars]
+
+[chroot-nodes]
+/mnt/ansible ansible_connection=chroot
+

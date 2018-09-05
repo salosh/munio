@@ -33,6 +33,19 @@
   tags:
   - service
 
+- name: "Create configuration directories"
+  file:
+    path:  "{{ item }}"
+    state: "directory"
+    owner: "{{ conf.username }}"
+    group: "{{ conf.groupname }}"
+    mode:  "u=rwx,g=rx,o=rx"
+    force: yes
+  loop:
+  - "{{ conf.root_dir }}"
+  tags:
+  - conf
+
 - name: "Deploy '{{ ansible_pkg_mgr }}' based configuration"
   include_tasks: "./conf_{{ ansible_pkg_mgr }}.yml"
 

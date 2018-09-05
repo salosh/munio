@@ -54,7 +54,9 @@ function cwu_watch_process() {
 function cwu_trace_mode() {
   while read line
   do
-    if [ "x${CWU_TRACE_MODE}" == "xjournal" ]; then
+    if [ "x${CWU_TRACE_MODE}" == "x/dev/null" ]; then
+      /bin/true
+    elif [ "x${CWU_TRACE_MODE}" == "xjournal" ]; then
       logger -t munio "${line}"
     elif [ "x${CWU_TRACE_MODE}" == "xlog" ]; then
       echo "${line}" > /var/log/consul/munio__$(cwu_pdate).json

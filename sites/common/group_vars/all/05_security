@@ -17,3 +17,5 @@
 #
 
 default_password: "iopIOP890"
+
+omit_risky_logs: True

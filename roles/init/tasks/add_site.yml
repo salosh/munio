@@ -36,19 +36,19 @@
     state: directory
     owner: "root"
     group: "root"
-    mode:  "u=rw,g=r,o=r"
+    mode:  "u=rwx,g=rx,o=rx"
   with_items:
   - "{{ root_dir }}"
   - "{{ root_dir }}/group_vars"
   - "{{ root_dir }}/host_vars"
 
-- name: "Create group_vars directories "
+- name: "Create group_vars directories"
   file:
     dest:  "{{ root_dir }}/group_vars/{{ item.path }}"
     state: directory
     owner: "root"
     group: "root"
-    mode:  "u=rw,g=r,o=r"
+    mode:  "u=rwx,g=rx,o=rx"
   with_filetree:
   - "{{ root_dir }}/../common/group_vars/"
   loop_control:
@@ -56,13 +56,13 @@
   when:
   - item.state == 'directory'
 
-- name: "Create host_vars directories "
+- name: "Create host_vars directories"
   file:
     dest:  "{{ root_dir }}/host_vars/{{ item.path }}"
     state: directory
     owner: "root"
     group: "root"
-    mode:  "u=rw,g=r,o=r"
+    mode:  "u=rwx,g=rx,o=rx"
   with_filetree:
   - "{{ root_dir }}/../common/host_vars/"
   loop_control:
@@ -129,4 +129,13 @@
     mode: "u=rw,g=r,o=r"
     force: no
 
+- name: "Create link to common hosts file"
+  file:
+    src:   "../common/hosts"
+    dest:  "{{ root_dir }}/common_hosts"
+    state: link
+    owner: "root"
+    group: "root"
+    mode:  "u=rwx,g=rx,o=rx"
+    force: yes
 

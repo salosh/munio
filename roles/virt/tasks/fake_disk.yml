@@ -1,0 +1,164 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Munio. <https://github.com/salosh/munio.git>
+#
+#    Munio is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Munio is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Munio.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+---
+- name: "fake_disk :: Create temporary file for fake block device"
+  tempfile:
+    state:  file
+    suffix: "_loopdevice"
+  register: temp_file
+
+- debug: var=temp_file.path
+  tags:
+  - debug
+
+- set_fact:
+    output_file: "{{ temp_file.path }}"
+  when:
+  - "output_file is not defined"
+  tags:
+  - always
+
+- name: "fake_disk :: Create block device"
+  vars:
+    block_count: 1024
+    output_file: "{{ temp_file.path }}"
+  shell: |
+    {% set cmd = []                                                        %}
+    {% set tmp = cmd.append('dd')                                          %}
+    {% set tmp = cmd.append('if=' ~ (input_file  | default('/dev/zero')) ) %}
+    {% set tmp = cmd.append('of=' ~ (output_file) )                        %}
+    {% set tmp = cmd.append('bs=' ~ (block_size  | default('1M')) )        %}
+    {% if block_count is defined                                           %}
+    {%   if (block_count | int)                                            %}
+    {%     set tmp = cmd.append('count=' ~ block_count)                    %}
+    {%   else                                                              %}
+    {%     set tmp = cmd.append('count=0')                                 %}
+    {%   endif                                                             %}
+    {% endif                                                               %}
+    {# set tmp = cmd.append('conv=fdatasync')                              #}
+    {# set tmp = cmd.append('iflag=direct')                                #}
+    {# set tmp = cmd.append('oflag=direct')                                #}
+    {% set tmp = cmd.extend(['&&', 'sync'])                                %}
+    {{ (cmd | join(' ') | replace('  ', '')) }}
+  register: create_block_device
+  tags:
+  - conf
+
+- debug: var=create_block_device
+  tags:
+  - debug
+
+# TODO add variables for partition scheme
+- name: "fake_disk :: Create boot partition"
+  parted:
+    label:  "gpt"
+    device: "{{ output_file }}"
+    number: 1
+    state: present
+    part_end: 129MiB
+    flags:
+    - "boot"
+    name: "boot"
+
+- name: "fake_disk :: Create root partition"
+  parted:
+    label:  "gpt"
+    device: "{{ output_file }}"
+    number: 2
+    state: present
+    part_start: 129MiB
+    part_end: "100%"
+    name: "root"
+
+- parted: device="{{ output_file }}" unit=MiB
+  register: fake_device_info
+
+- debug: var=fake_device_info
+  tags:
+  - debug
+
+#####
+- name: "fake_disk :: Configure mountpoint for root"
+  set_fact:
+    mountpoint: "/mnt/ansible"
+
+- name: "fake_disk :: Unmount previous partitions"
+  mount:
+    path:  "{{ item }}"
+    state: absent
+  loop:
+  - "{{ mountpoint }}/boot"
+  - "{{ mountpoint }}"
+
+- name: "fake_disk :: Clear attached loop-devices"
+  shell: "{{ item }}"
+  loop:
+  - "lvs | grep vg00 && vgchange -an vg00 || :"
+  - "losetup -D"
+
+- name: "fake_disk :: Find next available loop-device"
+  shell: "losetup -f"
+  register: loop_device
+
+- name: "Attach available loop-device to '{{ output_file }}'"
+  shell: "{{ item }}"
+  loop:
+  - "losetup {{ loop_device.stdout }} {{ output_file }}"
+  - "partprobe {{ loop_device.stdout }}"
+  - "pvscan --cache"
+
+# TODO add variables for non-LVM scheme
+- name: "fake_disk :: Create LVM volume group" 
+  lvg:
+    vg: vg00
+    pvs: "{{ loop_device.stdout }}p2"
+
+- name: "fake_disk :: Create root logical volume"
+  lvol:
+    vg: vg00
+    lv: root
+    size: +100%FREE
+    force: yes
+#######
+
+# TODO add variables for more file-systems
+- name: "fake_disk :: Create filesystems on partitions"
+  filesystem:
+    fstype: "{{ item.file_system }}"
+    dev:    "{{ item.device }}"
+  loop:
+  - device: "/dev/mapper/vg00-root"
+    file_system: "ext4"
+  - device: "{{ loop_device.stdout }}p1"
+    file_system: "ext2"
+
+- name: "fake_disk :: Mount root partition"
+  mount:
+    path: "{{ mountpoint }}"
+    src:  "/dev/mapper/vg00-root"
+    fstype: ext4
+    state: mounted
+
+- name: "fake_disk :: Mount boot partition"
+  mount:
+    path: "{{ mountpoint }}/boot"
+    src:  "{{ loop_device.stdout }}p1"
+    fstype: ext2
+    state: mounted
+

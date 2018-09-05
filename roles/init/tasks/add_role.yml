@@ -37,7 +37,7 @@
     state: directory
     owner: "root"
     group: "root"
-    mode:  "u=rw,g=r,o=r"
+    mode:  "u=rwx,g=rx,o=rx"
   with_items:
   - "{{ root_dir }}"
   - "{{ root_dir }}/defaults"

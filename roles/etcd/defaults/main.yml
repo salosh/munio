@@ -27,7 +27,7 @@ conf:
   conf_dir: /etc/etcd
   work_dir: /usr/share/etcd
 
-etcd_version: "3.3.8"
+etcd_version: "3.3.9"
 etcd_download_uri: "https://github.com/coreos/etcd/releases/download/v{{ etcd_version }}"
 
 requirements:
@@ -36,7 +36,7 @@ requirements:
     name:        "etcd-v{{ etcd_version }}-linux-amd64.tar.gz"
     remote_path: "{{ etcd_download_uri }}/etcd-v{{ etcd_version }}-linux-amd64.tar.gz"
     local_path:  "{{ dir_reqs }}/etcd-v{{ etcd_version }}-linux-amd64.tar.gz"
-    sha256:      "a1e9d30312f712f714be3d09b242b901a531dd9472351425c1e712ba740012a4"
+    sha256:      "7b95bdc6dfd1d805f650ea8f886fdae6e7322f886a8e9d1b0d14603767d053b1"
 
 
 bind_host: "{{ ips[cnc_net][inventory_hostname].ip }}"

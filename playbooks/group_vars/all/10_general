@@ -3,3 +3,8 @@ rack_name: "r{{ rack_type }}{{ rack_id }}"
 
 domain_name: "{{ site_name }}.{{ domain_suffix }}"
 fqdn: "{{ domain_name }}"
+fqhn: "{{ inventory_hostname }}.{{ domain_name }}"
+
+ldap_dc: "dc={{ domain_suffix.split('.')[-2] }},dc={{ domain_suffix.split('.')[-1] }}"
+cn_directory_admin: "cn=root,{{ ldap_dc }}"
+

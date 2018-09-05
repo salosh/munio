@@ -66,7 +66,7 @@
 
 - name: "Verify DNS functionality - internal"
   shell: |
-      {% set cmd = 'nslookup -debug ' ~ item ~ '.' ~ fqdn %}
+      {% set cmd = 'nslookup -debug ' ~ item ~ '.' ~ fqdn ~ ' ' ~  bind_host %}
       {{ (cmd) }}
   with_items:
   - "{{ groups['dns-nodes'] }}"
@@ -78,7 +78,7 @@
 
 - name: "Verify DNS functionality - external"
   shell: |
-      {% set cmd = 'nslookup -debug ' ~ item %}
+      {% set cmd = 'nslookup -debug ' ~ item ~ ' ' ~ bind_host %}
       {{ (cmd) }}
   with_items:
   - munio.io
@@ -89,5 +89,3 @@
   tags:
   - service
   - verify
-
-

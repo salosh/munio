@@ -1,3 +1,2 @@
 # ['networkd', 'ifcfg', 'interfacesd']
 network_service: "networkd"
-dns_service: "systemd-resolved"

@@ -1,29 +1,28 @@
 $TTL 86400
-@	IN	SOA     ns1.{{ fqdn }}.    hostmaster.{{ fqdn }}. (
+$ORIGIN {{ fqdn }}.
+@	IN	SOA     {{ inventory_hostname }}.{{ fqdn }}.    hostmaster.{{ fqdn }}. (
                         5410	   ; serial
                         21600	   ; refresh after 6 hours
                         3600	   ; retry after 1 hour
                         604800     ; expire after 1 week
                         86400 )    ; minimum TTL of 1 day
-
+; NS records
 {% for node in groups['dns-nodes'] %}
-        IN	NS	ns{{ loop.index }}.{{ fqdn }}.
+@        IN	NS	{{ node }}
 {% endfor %}
 
+;A records for DNS servers
 {% for node in groups['dns-nodes'] %}
 {% set net = hostvars[node].cnc_net %}
-ns{{ loop.index }}     IN	A	{{ ips[net][node].ip }}
+{{ node }}     IN	A	{{ ips[net][node].ip }}
 {% endfor %}
 
-{% for node in groups['dns-nodes'] %}
-{{ node }}	IN	CNAME   ns{{ loop.index }}
-{% endfor %}
-
+;A records for the rest of the cluster
 {% for node in groups['all'] %}
 {%   if node not in groups['dns-nodes'] %}
-{%     set net = hostvars[node].cnc_net %}
+{%     set net = hostvars[node].cnc_net | default('UNDEFINED_CNC_NET') %}
 {%     if net not in allocations.bynet or not node in allocations.bynet[net].keys() %}
-{%       if trace_mode is defined and trace_mode | bool                               %}
+{%       if trace_mode | bool                               %}
 ; Skipped node '{{ node }}'
 {%       endif                                                                        %}
 {%       continue                                                                   %}
@@ -37,3 +36,17 @@ ns{{ loop.index }}     IN	A	{{ ips[net][node].ip }}
 {%   endif %}
 {% endfor %}
 
+# TODO FIXME refactor target
+; SRV records
+{# _service._protocol.dom   ttl  class(IN) rr(SRV) prio weight port target #}
+{# dig @172.16.0.201 +noall +answer SRV _ldap._tcp.sdev.munio.local #}
+_ldap._tcp                  3600 IN        SRV     0    0      389   {{ groups['ha-nodes'][0] }}
+_kerberos._udp              3600 IN        SRV     1    0      88    {{ groups['ha-nodes'][0] }}
+_kerberos._tcp              3600 IN        SRV     1    0      88    {{ groups['ha-nodes'][0] }}
+_kpasswd._udp               3600 IN        SRV     1    0      464   {{ groups['ha-nodes'][0] }}
+_kerberos-adm._tcp          3600 IN        SRV     1    0      749   {{ groups['ha-nodes'][0] }}
+{# https://coreos.com/etcd/docs/latest/v2/clustering.html#dns-discovery #}
+_etcd-server-ssl._tcp       3600 IN        SRV     1    0      2380  {{ groups['ha-nodes'][0] }}
+_etcd-server._tcp           3600 IN        SRV     1    0      2380  {{ groups['ha-nodes'][0] }}
+;_etcd-client._tcp           3600 IN        SRV     1    0      2379  {{ groups['ha-nodes'][0] }}
+_etcd-client-ssl._tcp       3600 IN        SRV     1    0      2379  {{ groups['ha-nodes'][0] }}

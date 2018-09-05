@@ -60,6 +60,9 @@ connectivity_mode: "online"
 # ['networkd', 'ifcfg', 'interfacesd']
 network_service: "undefined"
 
-# ['systemd-resolved']
-dns_service: "undefined"
+proxy:
+  enabled: false
+  protocol: "http"
+  host: ""
+  port: 3142
 

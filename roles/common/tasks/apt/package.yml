@@ -20,9 +20,7 @@
 - name: "common :: Force update packages packages using '{{ ansible_pkg_mgr }}'"
   environment:
     http_proxy:  "{{ proxy.protocol }}://{{ proxy.host }}:{{ proxy.port }}"
-    HTTP_PROXY:  "{{ proxy.protocol }}://{{ proxy.host }}:{{ proxy.port }}"
     https_proxy: "{{ proxy.protocol }}://{{ proxy.host }}:{{ proxy.port }}"
-    HTTPS_PROXY: "{{ proxy.protocol }}://{{ proxy.host }}:{{ proxy.port }}"
   shell:
     "{{ shell_cmd }}"
   with_items:
@@ -38,9 +36,12 @@
   - bin
 
 - name: "common :: Install required packages using '{{ ansible_pkg_mgr }}'"
+  environment:
+    http_proxy:  "{{ proxy.protocol }}://{{ proxy.host }}:{{ proxy.port }}"
+    https_proxy: "{{ proxy.protocol }}://{{ proxy.host }}:{{ proxy.port }}"
   apt:
     name: "{{ pkg_name }}"
-    state: installed
+    state: present
   with_items:
   - "{{ packages }}"
   loop_control:

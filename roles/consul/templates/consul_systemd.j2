@@ -3,7 +3,7 @@ Description=Consul service
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/consul agent -ui -domain=lb -config-dir=/etc/consul -config-dir=/etc/consul.d
+ExecStart=/usr/bin/consul agent -ui -domain={% if service_discovery_provider == 'todero' %}consul{% else %}lb{% endif %} -config-dir=/etc/consul -config-dir=/etc/consul.d
 ExecReload=/usr/bin/kill -HUP $MAINPID
 
 [Install]
