@@ -18,8 +18,10 @@
 
 ---
 - name: "common :: Deploy repositories for '{{ ansible_pkg_mgr }}'"
+  vars:
+    distro: "{{ ubuntu_distro | default('xenial') }}"
   template:
-    src:   "sources.list.j2"
+    src:   "{{ distro }}_sources.list.j2"
     dest:  "/etc/apt/sources.list"
     owner: "root"
     group: "root"
