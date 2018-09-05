@@ -53,7 +53,11 @@ options {
 
 zone "." IN {
 	type hint;
-	file "named.ca";
+{% if external_dns is defined and external_dns | length > 0 %}
+    file "named.ca";
+{% else %}
+    file "/dev/null";
+{% endif %}
 };
 
 zone "{{ fqdn }}" IN {
@@ -62,7 +66,7 @@ zone "{{ fqdn }}" IN {
         allow-update { none; };
 };
 
-zone "{{ nets[cnc_net].cidr | ipaddr('revdns') }}" IN {
+zone "{{ nets[cnc_net].cidr | ipaddr('revdns') | regex_replace('^([0]+\\.)*','') }}" IN {
         type master;
         file "domain.rr.zone";
         allow-update { none; };

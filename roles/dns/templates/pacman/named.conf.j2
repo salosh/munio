@@ -7,22 +7,45 @@ options {
     listen-on { {{ bind_host }}; };
     listen-on-v6 { any; };
 
-    allow-recursion { 127.0.0.1; {{ nets[cnc_net].cidr }}; };
-    allow-transfer { none; };
-    allow-update { none; };
-    allow-query     { 127.0.0.1; {{ nets[cnc_net].cidr }}; };
+    allow-recursion {
+{% for item in allow_recursion %}
+        {{ item }};
+{% endfor %}
+    };
+
+    allow-transfer {
+{% for item in allow_transfer %}
+        {{ item }};
+{% endfor %}
+    };
+
+    allow-update {
+{% for item in allow_update %}
+        {{ item }};
+{% endfor %}
+    };
+
+    allow-query {
+{% for item in allow_query %}
+        {{ item }};
+{% endfor %}
+    };
 
 {% if external_dns is defined and external_dns | length > 0 %}
-        forwarders {
+    forwarders {
 {%   for dns in external_dns %}
-            {{ dns }};
+        {{ dns }};
 {%   endfor %}
-        };
+    };
 {% endif %}
 
     version none;
     hostname none;
     server-id none;
+
+    max-cache-ttl 3;
+    max-ncache-ttl 3;
+
 };
 
 zone "localhost" IN {
@@ -52,7 +75,11 @@ zone "0.in-addr.arpa" IN {
 
 zone "." IN {
     type hint;
+{% if external_dns is defined and external_dns | length > 0 %}
     file "root.hint";
+{% else %}
+    file "/dev/null";
+{% endif %}
 };
 
 zone "{{ fqdn }}" IN {
@@ -61,7 +88,7 @@ zone "{{ fqdn }}" IN {
         allow-update { none; };
 };
 
-zone "{{ nets[cnc_net].cidr | ipaddr('revdns') }}" IN {
+zone "{{ nets[cnc_net].cidr | ipaddr('revdns') | regex_replace('^([0]+\\.)*','') }}" IN {
         type master;
         file "domain.rr.zone";
         allow-update { none; };
@@ -84,6 +111,21 @@ zone "lb" IN {
 {% for dns_node in groups['lb-nodes'] %}
 {%   if inventory_hostname != dns_node %}
           {{ ips[cnc_net][dns_node].ip }} port {{ port }};
+{%   endif %}
+{% endfor %}
+        };
+};
+
+zone "consul" IN {
+        type forward;
+        forward only;
+        forwarders {
+          // query local first
+          {{ ips[cnc_net][inventory_hostname].ip }} port 8600;
+          // then other nodes
+{% for dns_node in groups['lb-nodes'] %}
+{%   if inventory_hostname != dns_node %}
+          {{ ips[cnc_net][dns_node].ip }} port 8600;
 {%   endif %}
 {% endfor %}
         };

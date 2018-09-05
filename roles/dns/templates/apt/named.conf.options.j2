@@ -37,6 +37,10 @@ options {
 
         listen-on { {{ bind_host }}; };
 	listen-on-v6 { any; };
+
+        max-cache-ttl 3;
+        max-ncache-ttl 3;
+
 };
 
 logging {

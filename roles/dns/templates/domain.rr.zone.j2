@@ -1,5 +1,5 @@
 $TTL 86400 
-@	IN	SOA	ns1.{{ fqdn }}.	hostmaster.{{ fqdn }}. (
+@	IN	SOA	{{ fqdn }}.	hostmaster.{{ fqdn }}. (
 			5410       ; serial                     
 			21600      ; refresh after 6 hours                     
 			3600       ; retry after 1 hour                     
@@ -7,7 +7,10 @@ $TTL 86400
 			86400 )    ; minimum TTL of 1 day        
 
 
-@	IN	NS	ns1.
+{% for node in groups['dns-nodes'] %}
+{%   set net = hostvars[node].cnc_net %}
+	IN       NS     ns{{ loop.index }}.{{ fqdn }}.
+{% endfor %}
 
 {% for node in groups['dns-nodes'] %}
 {%   set net = hostvars[node].cnc_net %}
@@ -16,16 +19,16 @@ $TTL 86400
 
 {% for node in groups['all'] %}
 {%   if node not in groups['dns-nodes'] %}
-{%     set net = hostvars[node].cnc_net %}
+{%     set net = hostvars[node].cnc_net | default('UNDEFINED_CNC_NET') %}
 {%     if net not in allocations.bynet or not node in allocations.bynet[net].keys() %}
-{%       if trace_mode is defined and trace_mode | bool                               %}
+{%       if trace_mode | bool                               %}
 ; Skipped node '{{ node }}'
 {%       endif                                                                        %}
 {%       continue                                                                   %}
 {%     endif                                                                        %}
 {%     set ip = ips[net][node].ip %}
 {%     if ip | ipaddr('address') %}
-{{ ip.split('.') | reverse | list | join('.') }}    IN      PTR     {{ node }}.
+{{ ip.split('.') | reverse | list | join('.') }}.in-addr.arpa    IN      PTR     {{ node }}.{{ fqdn }}. ; {{ ip }}
 {%     else %}
 ; Failed adding ip '{{ ip }}' for node '{{ node }}'
 {%     endif %}

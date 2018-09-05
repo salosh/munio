@@ -96,10 +96,17 @@
   - conf
   - init
 
+- name: "Remove old resolv.conf"
+  file:
+    dest:  /etc/resolv.conf
+    state: absent
+  tags:
+  - conf
+
 - name: "Deploy resolv.conf"
   template:
     src:   "./{{ item }}.j2"
-    dest:  "/run/systemd/resolve/resolv.conf"
+    dest:  "/etc/resolv.conf"
     owner: "root"
     group: "root"
     mode:  "u=rw,g=r,o=r"
