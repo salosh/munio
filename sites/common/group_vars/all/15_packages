@@ -48,7 +48,7 @@ pacman_pkg_group:
   - curl
   - socat
 #  - lldpd
-#  - whois
+  - whois
   - ipcalc
   - sipcalc
   - net-tools
@@ -94,7 +94,8 @@ pacman_pkg_group:
   - python-netaddr
   - python2
   - python2-pip
-  - python2-netaddr
+  - python2-netaddr #ipaddr
+  - python-jmespath #json_query
   devops:
   - apache
   - dhcp
@@ -102,6 +103,9 @@ pacman_pkg_group:
   - redis
   - docker
   ui:
+#  - xorg
+#  - xfce4
+#  - xterm
   - xorg-xrandr
   - xorg-server
   - xorg-xinit
@@ -134,7 +138,7 @@ pacman_pkg_group:
 
 apt_pkg_group:
   boot:
-  - grub
+  - grub2
   - os-prober
   filesystem:
   - acl
@@ -152,6 +156,7 @@ apt_pkg_group:
   - traceroute
   - ntp
   - ntpdate
+  - whois
   tools:
   - bzip2
   - zip
@@ -185,6 +190,8 @@ apt_pkg_group:
   - python-minimal
   - python-mysqldb
   - python-netaddr
+  - python3
+  - python3-pip
   - python3-flask
   - python3-mysqldb
   - python3-neutronclient
@@ -199,6 +206,7 @@ yum_pkg_group:
   - bridge-utils
   - nc
   - tcpdump
+  - whois
   - traceroute
   tools:
   - unzip

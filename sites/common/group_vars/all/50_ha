@@ -28,6 +28,26 @@ lb_services:
     hostname: "vault.service.lb"
     bind_port: 8200
     apply_to: "vault-nodes"
+    dns_ttl: "15s"
+    unpublish_failures: true
+    checks:
+    - port: "8200"
+  ldap:
+    hostname: "ldap.service.lb"
+    bind_port: 389
+    apply_to: "ldapserver-nodes"
+    dns_ttl: "15s"
+    unpublish_failures: true
+    checks:
+    - port: "389"
+  kerberos:
+    hostname: "kerberos.service.lb"
+    bind_port: 88
+    apply_to: "kerberosserver-nodes"
+    dns_ttl: "15s"
+    unpublish_failures: true
+    checks:
+    - port: "88"
   dns:
     hostname: "dns.service.lb"
     bind_port: 53
@@ -50,8 +70,9 @@ lb_services:
     unpublish_failures: true
     checks:
     - port: "80"
-    - exec: ['/bin/true']
-    - name: "httpd"
+#    - exec: ['/bin/true']
+# TODO add variales per operating system
+#    - name: "httpd"
   elasticsearch:
     hostname: "elasticsearch.service.lb"
     bind_port: 9200
@@ -85,7 +106,6 @@ lb_services:
     hostname: "glanceregistry.service.lb"
     bind_port: 9191
     apply_to: "keystone-nodes"
-
 
 lb_keys: []
 
