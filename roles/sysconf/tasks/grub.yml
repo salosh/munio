@@ -40,23 +40,10 @@
     mode:   "u=rw,g=r,o=r"
   register: grub_cmdline
 
-- name: "Apply GRUB settings for '{{ ansible_pkg_mgr }}'"
-  shell:
-    update-grub
-  when:
-  - grub_cmdline is changed
-  - "ansible_pkg_mgr == 'apt'"
-
-- name: "Apply GRUB settings for '{{ ansible_pkg_mgr }}'"
+# TODO add path variable
+- name: "Create grub.cfg"
   shell:
     grub-mkconfig -o /boot/grub/grub.cfg
   when:
   - grub_cmdline is changed
-  - "ansible_pkg_mgr == 'pacman'"
-
-- name: "Apply GRUB settings for '{{ ansible_pkg_mgr }}'"
-  shell:
-    grub2-mkconfig -o /boot/grub2/grub.cfg
-  when:
-    "ansible_pkg_mgr == 'yum'"
 

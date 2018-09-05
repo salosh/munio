@@ -1,9 +1,24 @@
 ---
+- name: "Set proxy address for proxied sites"
+  set_fact:
+    http_proxy:  "{{ proxy.protocol }}://{{ proxy.host }}:{{ proxy.port }}"
+    https_proxy: "{{ proxy.protocol }}://{{ proxy.host }}:{{ proxy.port }}"
+  when:
+  - proxy is defined
+  - proxy.enabled | bool
+
+- name: "Set proxy address for proxied sites"
+  set_fact:
+    http_proxy:  ""
+    https_proxy: ""
+  when:
+  - (proxy is not defined) or not (proxy.enabled | bool)
+
 - name: "Deploy proxy settings"
   lineinfile:
     path:   "/etc/bash.bashrc"
-    regexp: 'export http_proxy='
-    line:   'export http_proxy={{ proxy.protocol }}://{{ proxy.host }}:{{ proxy.port }}'
+    regexp: '^export http_proxy=(.*)$'
+    line:   'export http_proxy={{ http_proxy }}'
     owner:  "root"
     group:  "root"
     mode:   "u=rw,g=r,o=r"
@@ -13,8 +28,8 @@
 - name: "Deploy proxy settings"
   lineinfile:
     path:   "/etc/bash.bashrc"
-    regexp: 'export https_proxy='
-    line:   'export https_proxy={{ proxy.protocol }}://{{ proxy.host }}:{{ proxy.port }}'
+    regexp: '^export https_proxy=(.*)$'
+    line:   'export https_proxy={{ https_proxy }}'
     owner:  "root"
     group:  "root"
     mode:   "u=rw,g=r,o=r"
