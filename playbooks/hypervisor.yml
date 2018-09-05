@@ -17,36 +17,29 @@
 #
 
 ---
+- hosts: hypervisor-nodes
+#  gather_facts: yes
+#  no_log: True
+  roles:
+  - { role: sysconf }
+  - { role: http, bind_host: "{{ nets[cnc_net].gateway }}" }
+  - { role: mctx }
+  - { role: dhcp }
+  - { role: pkgcache }
+
+- import_playbook: "./virt.yml"
+
+- hosts: virtual-nodes
+  max_fail_percentage: 0
+  gather_facts: no
+#  no_log: True
+  roles:
+  - { role: sshauth }
+
 - hosts: ha-nodes
 ##  strategy: free
 #  gather_facts: no
 #  no_log: True
   roles:
   - { role: sysconf, sysconf_final_op: "reboot" }
-
-- import_playbook: "./dns.yml"
-- import_playbook: "./rootca.yml"
-#- import_playbook: "./consul.yml"
-- import_playbook: "./etcd.yml"
-- import_playbook: "./coredns.yml"
-- import_playbook: "./todero.yml"
-- import_playbook: "./ldap.yml"
-#- import_playbook: "./kerberos.yml"
-- import_playbook: "./vault.yml"
-
-
-#- import_playbook: "./kubernetes.yml"
-#- import_playbook: "./mariadb.yml"
-#- import_playbook: "./rabbitmq.yml"
-#- import_playbook: "./glusterfs.yml"
-#- import_playbook: "./elasticsearch.yml"
-#- import_playbook: "./telegraf.yml"
-
-- hosts: ha-nodes
-##  strategy: free
-#  gather_facts: no
-#  no_log: True
-  roles:
-  - { role: http, bind_port: 8080 }
-  - { role: nginx, bind_port: 80, vault_host: "ha01", vault_port: 8200, ssl_path_cert: "/etc/nginx/nginx.crt", ssl_path_key: "/etc/nginx/nginx.key"}
 
