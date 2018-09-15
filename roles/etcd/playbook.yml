@@ -21,7 +21,6 @@
 #  gather_facts: no
 #  max_fail_percentage: 0
 #  serial: 10
-#  no_log: True
   roles:
   - { role: etcd }
 

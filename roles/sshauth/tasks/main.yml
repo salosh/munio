@@ -39,6 +39,8 @@
   - auth
 
 - name: "Create configuration directories"
+  remote_user: "{{ sshauth_remote_user }}"
+  become: yes
   file:
     path:  "/etc/sudoers.d"
     state: "directory"

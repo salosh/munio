@@ -34,6 +34,8 @@
   - conf
 
 - name: "Sign :: Generate CSR for '{{ what_to_sign }}'"
+  environment:
+    SAN: ""
   shell:
     openssl req -config {{ intermediate_dir }}/openssl.cnf -key {{ wts_key }} -new -sha256 -out {{ wts_csr }} -subj "/OU=Munio {{ what_to_sign | capitalize }}/CN={{ subject | default(what_to_sign) }}/emailAddress={{ what_to_sign }}@{{ domain_name }}"
   register: sign_create_csr
@@ -43,11 +45,38 @@
   - conf
 
 - name: "Sign :: Generate certificate for '{{ what_to_sign }}'"
+  environment:
+    SAN: |
+      {% set san = [] %}
+      {% if extension == 'client_cert' %}
+      {%   set tmp = san.append('DNS:' ~ what_to_sign) %}
+      {%   set tmp = san.append('DNS:' ~ what_to_sign ~'.'~ domain_name) %}
+      {%   if what_to_sign in groups['all'] %}
+      {%     set tmp = san.append('IP:' ~ ips[hostvars[what_to_sign].cnc_net][what_to_sign].ip ) %}
+      {%   endif %}
+      {% elif extension in ['server_cert', 'combined_cert'] %}
+      {%   set tmp = san.append('DNS:' ~ what_to_sign ~'.'~ domain_name) %}
+      {%   set tmp = san.append('DNS:' ~ what_to_sign ~'.service.todero.local') %}
+      {%   for node in groups['ha-nodes'] %}
+      {%     set tmp = san.append('DNS:' ~ node ~'.'~ domain_name) %}
+      {%   endfor %}
+      {% endif %}
+      {{ (san | join(',')) }}
   shell:
-    openssl ca -batch -config {{ intermediate_dir }}/openssl.cnf -extensions {{ extension }} -days 366 -notext -md sha256 -in {{ wts_csr }} -passin file:/root/.ssh/id_rsa -out {{ wts_crt }}
+    openssl ca -batch -config {{ intermediate_dir }}/openssl.cnf -extensions {{ extension }} -extensions san_env -days 366 -notext -md sha256 -in {{ wts_csr }} -passin file:/root/.ssh/id_rsa -out {{ wts_crt }}
   register: sign_create_certificate
   args:
     creates: "{{ wts_crt }}"
   tags:
   - conf
 
+- name: "Sign :: Verify '{{ what_to_sign }}' certificate"
+  shell: "{{ item }}"
+  loop:
+  - "openssl x509 -in {{ wts_crt }} -text -noout"
+  register: item_output
+  loop_control:
+    label: "{{ item }} =>\n{{ item_output }}"
+  tags:
+  - verify
+  - debug

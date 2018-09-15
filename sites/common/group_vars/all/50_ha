@@ -21,11 +21,11 @@
 # TODO XXX change to script, inventory_hostname wont resolve correctly on secondaries
 lb_services:
   leader:
-    hostname: "leader.service.lb"
+    hostname: "leader.service.todero.local"
     apply_to: "consul-nodes"
     watch_script: "consul operator raft list-peers | grep {{ inventory_hostname }} | grep leader || exit 2"
   vault:
-    hostname: "vault.service.lb"
+    hostname: "vault.service.todero.local"
     bind_port: 8200
     apply_to: "vault-nodes"
     dns_ttl: "15s"
@@ -33,7 +33,7 @@ lb_services:
     checks:
     - port: "8200"
   ldap:
-    hostname: "ldap.service.lb"
+    hostname: "ldap.service.todero.local"
     bind_port: 389
     apply_to: "ldapserver-nodes"
     dns_ttl: "15s"
@@ -41,7 +41,7 @@ lb_services:
     checks:
     - port: "389"
   kerberos:
-    hostname: "kerberos.service.lb"
+    hostname: "kerberos.service.todero.local"
     bind_port: 88
     apply_to: "kerberosserver-nodes"
     dns_ttl: "15s"
@@ -49,12 +49,12 @@ lb_services:
     checks:
     - port: "88"
   dns:
-    hostname: "dns.service.lb"
+    hostname: "dns.service.todero.local"
     bind_port: 53
     bind_protocol: "udp"
     apply_to: "dns-nodes"
   etcd:
-    hostname: "etcd.service.lb"
+    hostname: "etcd.service.todero.local"
     bind_port: 2379
     apply_to: "etcd-nodes"
     dns_ttl: "15s"
@@ -63,7 +63,7 @@ lb_services:
     - port: "2379"
     - name: "etcd"
   http:
-    hostname: "http.service.lb"
+    hostname: "http.service.todero.local"
     bind_port: 80
     apply_to: "http-nodes"
     dns_ttl: "30s"
@@ -74,36 +74,36 @@ lb_services:
 # TODO add variales per operating system
 #    - name: "httpd"
   elasticsearch:
-    hostname: "elasticsearch.service.lb"
+    hostname: "elasticsearch.service.todero.local"
     bind_port: 9200
     apply_to: "elasticsearch-nodes"
     dns_ttl: "60s"
   redis:
-    hostname: "redis.service.lb"
+    hostname: "redis.service.todero.local"
     bind_port: 6379
     apply_to: "redis-nodes"
   glusterfs:
-    hostname: "glusterfs.service.lb"
+    hostname: "glusterfs.service.todero.local"
     bind_port: 24007
     apply_to: "glusterfs-nodes"
   mariadb:
-    hostname: "mariadb.service.lb"
+    hostname: "mariadb.service.todero.local"
     bind_port: 3306
     apply_to: "mariadb-nodes"
   keystoneadmin:
-    hostname: "keystoneadmin.service.lb"
+    hostname: "keystoneadmin.service.todero.local"
     bind_port: 35357
     apply_to: "keystone-nodes"
   keystonepublic:
-    hostname: "keystonepublic.service.lb"
+    hostname: "keystonepublic.service.todero.local"
     bind_port: 5000
     apply_to: "keystone-nodes"
   glanceapi:
-    hostname: "glanceapi.service.lb"
+    hostname: "glanceapi.service.todero.local"
     bind_port: 9292
     apply_to: "glance-nodes"
   glanceregistry:
-    hostname: "glanceregistry.service.lb"
+    hostname: "glanceregistry.service.todero.local"
     bind_port: 9191
     apply_to: "keystone-nodes"
 

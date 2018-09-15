@@ -1,0 +1,4 @@
+#source_image: "munio-base-latest.img"
+#flavor: "v1.small"
+#sshauth_remote_user: root
+

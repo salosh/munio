@@ -25,7 +25,7 @@ zone "{{ nets[cnc_net].cidr | ipaddr('revdns') | regex_replace('^([0]+\\.)*','')
 # Consul service-discovery forward zone settings
 {%   set port = 8600 %}
 {% endif %}
-zone "lb" IN {
+zone "todero.local" IN {
         type forward;
         forward only;
         forwarders {

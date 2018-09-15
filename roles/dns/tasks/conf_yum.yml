@@ -57,6 +57,7 @@
     mode:  "u=rw,g=r,o=r"
     force: yes
   with_items:
+  - "offline.zone"
   - "domain.zone"
   - "domain.rr.zone"
   tags:

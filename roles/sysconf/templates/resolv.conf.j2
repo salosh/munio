@@ -1,10 +1,14 @@
 search {{ domain_name }}
+
+{% if inventory_hostname in groups['dns-nodes'] %}
 # query local node first
 nameserver {{ ips[cnc_net][inventory_hostname].ip }}
 # then other nodes
+{% endif %}
 {% for dns_node in groups['dns-nodes'] %}
 {%   if inventory_hostname != dns_node %}
-nameserver {{ ips[cnc_net][dns_node].ip }}
+{%     set net = hostvars[dns_node].cnc_net %}
+nameserver {{ ips[net][dns_node].ip }}
 {%   endif %}
 {% endfor %}
 

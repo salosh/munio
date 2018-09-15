@@ -8,6 +8,8 @@ User=etcd
 Type=notify
 Environment=ETCD_DATA_DIR=/var/lib/etcd
 Environment=ETCD_NAME=%m
+Environment=http_proxy=
+Environment=https_proxy=
 ExecStart=/usr/bin/etcd --config-file {{ conf.conf_dir }}/{{ conf.conf_file }}
 Restart=always
 RestartSec=10s

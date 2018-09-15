@@ -63,7 +63,7 @@ pip_packages:
   - pip
   - zmq
   - psutil
-  - python-etcd
+  - etcd3
   - coloredlogs
   - pyyaml
   - elasticsearch

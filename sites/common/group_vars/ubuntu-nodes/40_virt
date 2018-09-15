@@ -1,4 +1,5 @@
+#source_image: "bionic-server-cloudimg-amd64.img"
 source_image: "xenial-server-cloudimg-amd64-disk1.img"
-flavor: "s1.large"
+flavor: "s1.small"
 sshauth_remote_user: ubuntu
 
