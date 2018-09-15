@@ -76,6 +76,20 @@
   - service
   - verify
 
+- name: "Verify DNS functionality - external DNS servers"
+  shell: |
+      {% set cmd = 'nslookup -debug ' ~ item ~ ' ' ~  bind_host %}
+      {{ (cmd) }}
+  with_items:
+  - "{{ external_dns }}"
+  when:
+  - "external_dns | length > 0"
+  loop_control:
+    label: "'{{ inventory_hostname }}' verifies internal DNS resolving to '{{ item }}'"
+  tags:
+  - service
+  - verify
+
 - name: "Verify DNS functionality - external"
   shell: |
       {% set cmd = 'nslookup -debug ' ~ item ~ ' ' ~ bind_host %}

@@ -41,7 +41,7 @@ yum:
 # ['none', 'localhost', 'cnc', 'nets', 'any']
 dns_allow_recursion:
   - "localhost"
-  - "cnc"
+  - "nets"
 dns_allow_transfer:
   - "none"
 dns_allow_update:

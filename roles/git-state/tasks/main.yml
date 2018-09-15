@@ -1,0 +1,106 @@
+# Author: Salo Shp <saloshp@gmail.com>
+#
+#    This file is part of Munio. <https://github.com/salosh/munio.git>
+#
+#    Munio is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Munio is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with Munio.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+---
+- name: "Install packages"
+  vars:
+    packages: "{{ conf.packages }}"
+  include_tasks: "{{ role_path }}/../common/tasks/{{ ansible_pkg_mgr }}/package.yml"
+  tags:
+  - bin
+
+- name: "Create OS groups"
+  group:
+    name:   "{{ conf.groupname }}"
+    system: "yes"
+    state:  "present"
+  tags:
+  - init
+
+- name: "Create OS users"
+  user:
+    name:      "{{ conf.username }}"
+    group:     "{{ conf.groupname }}"
+    append:    "yes"
+    shell:     "/bin/bash"
+    home:      "{{ conf.root_dir }}"
+    generate_ssh_key: "yes"
+    ssh_key_bits:     "4096"
+    ssh_key_file:     ".ssh/id_rsa"
+    move_home: "yes"
+    system:    "yes"
+    state:     "present"
+  tags:
+  - init
+
+- name: "Slurp SSH public-key"
+  slurp:
+    src: "{{ conf.root_dir }}/.ssh/id_rsa.pub"
+  register: gitpubkey
+  tags:
+  - init
+
+- name: "Authorize '{{ conf.username }}' SSH access"
+  authorized_key:
+    user: "{{ conf.username }}"
+    state: present
+    key:  "{{ item }}"
+    key_options: 'no-port-forwarding,no-agent-forwarding,no-X11-forwarding,from="127.0.0.1"'
+  with_items:
+  - "{{ gitpubkey['content'] | b64decode }}"
+  - "{{ lookup('file', lookup('env','HOME') + '/.ssh/id_rsa.pub') }}"
+  delegate_to: "{{ inventory_hostname }}"
+  tags:
+  - init
+
+- name: "Create GIT server directory"
+  file:
+    dest:  "{{ item }}"
+    state: directory
+    owner: "{{ conf.username }}"
+    group: "{{ conf.groupname }}"
+    mode:  "u=rwx,g=rx,o="
+  with_items:
+  - "{{ conf.work_dir }}"
+
+- name: "Initialize bare GIT repo at '{{ conf.work_dir }}'"
+  shell: "{{ item }}"
+  args:
+    chdir: "{{ conf.work_dir }}"
+  loop:
+  - "git init --bare"
+  register: item_output
+  loop_control:
+    label: "{{ item }} =>\n{{ item_output }}"
+
+- name: "Initialize GIT repo at '{{ conf.work_dir }}'"
+  shell: "{{ item }}"
+  args:
+    chdir: "/etc"
+  loop:
+  - "git init"
+  - "git config core.sshCommand 'ssh -i {{ conf.root_dir }}/.ssh/id_rsa -F /dev/null'"
+  - "git remote add origin ssh://{{ conf.username }}@127.0.0.1:{{ conf.work_dir }}"
+  - "git config --global user.email '{{ conf.username }}@{{ fqhn }}'"
+  - "git config --global user.name {{ conf.username }}"
+  - "git config --global push.default matching"
+  - "git add *"
+  - "git commit -m 'Initial commit'"
+  register: item_output
+  loop_control:
+    label: "{{ item }} =>\n{{ item_output }}"

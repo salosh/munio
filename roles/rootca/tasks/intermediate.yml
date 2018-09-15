@@ -17,6 +17,15 @@
 #
 
 ---
+- name: "Intermediate :: Delete previous CA directories"
+  file:
+    dest:  "{{ item }}"
+    state: absent
+  with_items:
+  - "{{ intermediate_dir }}"
+  tags:
+  - clear
+
 - name: "Intermediate :: Create CA directories"
   file:
     path:  "{{ item }}"
@@ -62,11 +71,13 @@
 
 # TODO FIXME root and inter should not use the same key file
 - name: "Intermediate :: Generate creds"
+  environment:
+    SAN: ""
   shell:
     "{{ item }}"
   with_items:
-#  - openssl genrsa -aes256 {% if encrypt_creds | bool %}-passout file:/root/.ssh/id_rsa{% endif %} -out {{ intermediate_dir }}/private/ca.key 4096
-  - openssl req -nodes -newkey rsa:4096 -keyout {{ intermediate_dir }}/private/ca.key {% if encrypt_creds | bool %}-passout file:/root/.ssh/id_rsa{% endif %} -subj "/C=IL/ST=Israel/L=JM/O=Munio/OU=DevOps/CN=www.{{ domain_name }}/emailAddress=''"
+#  - openssl genrsa -aes256 {% if encrypt_creds | bool %}-passout file:/root/.ssh/id_rsa{% endif %} -out {{ intermediate_dir }}/private/ca.key 2048
+  - openssl req -nodes -newkey rsa:2048 -keyout {{ intermediate_dir }}/private/ca.key {% if encrypt_creds | bool %}-passout file:/root/.ssh/id_rsa{% endif %} -subj "/C=IL/ST=Israel/L=JM/O=Munio/OU=DevOps/CN=www.{{ domain_name }}/emailAddress=''"
   - openssl rsa -in {{ intermediate_dir }}/private/ca.key {% if encrypt_creds | bool %}-passin file:/root/.ssh/id_rsa{% endif %} -pubout > {{ intermediate_dir }}/private/ca.pub
   - chmod 400 {{ intermediate_dir }}/private/ca.key
   - openssl req -config {{ intermediate_dir }}/openssl.cnf -new -sha256 -key {{ intermediate_dir }}/private/ca.key {% if encrypt_creds | bool %}-passin file:/root/.ssh/id_rsa{% endif %} -out {{ intermediate_dir }}/csr/intermediate.csr -subj "/OU=Munio Certificate Authority/CN=Munio {{ intermediate_ca_name | capitalize }} CA"
@@ -96,6 +107,8 @@
   - conf
 
 - name: "Intermediate :: Generate CRLs"
+  environment:
+    SAN: ""
   shell:
     openssl ca -config {{ intermediate_dir }}/openssl.cnf -gencrl {% if encrypt_creds | bool %}-passin file:/root/.ssh/id_rsa{% endif %} -out {{ intermediate_dir }}/crl/ca.crl
   register: service_server_certs

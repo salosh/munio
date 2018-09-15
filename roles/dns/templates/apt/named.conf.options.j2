@@ -16,13 +16,14 @@ options {
         notify yes;
         notify-source *;
 
+        forwarders {
 {% if external_dns is defined and external_dns | length > 0 %}
-	forwarders {
 {%   for dns in external_dns %}
             {{ dns }};
 {%   endfor %}
-	};
 {% endif %}
+        };
+
 	//========================================================================
 	// If BIND logs error messages about the root key being expired,
 	// you will need to update your keys.  See https://www.isc.org/bind-keys
@@ -43,17 +44,15 @@ options {
 
 };
 
+# See https://kb.isc.org/docs/aa-01526 for more
 logging {
-        channel simple_log {
-                file "/var/lib/bind/bind.log"
-                versions 3 size 5M;
-                severity warning;
-                print-time yes;
-                print-severity yes;
-                print-category yes;
-        };
-        category default {
-                simple_log;
-        };
+     channel syslog {
+          print-time yes;
+          print-category yes;
+          print-severity yes;
+          syslog daemon;
+          severity warning;
+     };
+     category default {syslog; };
 };
 

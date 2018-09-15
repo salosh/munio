@@ -32,16 +32,16 @@ conf:
   work_dir: "/usr/share/coredns"
   log_dir: "/var/log/coredns"
 
-coredns_version: "1.2.1"
+coredns_version: "1.2.2"
 coredns_download_uri: "https://github.com/coredns/coredns/releases/download/v{{ coredns_version }}"
 
 requirements:
   binary:
     type:        "uri"
-    name:        "coredns_{{ coredns_version }}_linux_amd64.tgz"
-    remote_path: "{{ coredns_download_uri }}/coredns_{{ coredns_version }}_linux_amd64.tgz"
-    local_path:  "{{ dir_reqs }}/coredns_{{ coredns_version }}_linux_amd64.tgz"
-    sha256:      "cc7e9db06a13a51fc351fa9f3e7ab4e6ddc0591fe0536f4b2f3fd337ab652fb4"
+    name:        "release.coredns_{{ coredns_version }}_linux_amd64.tgz"
+    remote_path: "{{ coredns_download_uri }}/release.coredns_{{ coredns_version }}_linux_amd64.tgz"
+    local_path:  "{{ dir_reqs }}/release.coredns_{{ coredns_version }}_linux_amd64.tgz"
+    sha256:      "19e44f957520b1ffeeb705c3513a40f4319922318456c1eb0c762ce798a6e1e2"
 
 bind_host: "{{ ips[cnc_net][inventory_hostname].ip }}"
 bind_port: "5453"

@@ -23,7 +23,21 @@
     dest: "/root/.{{ item }}"
     owner: root
     group: root
-    mode: "u=rwx,g=rx,o="
+    mode: "u=rw,g=r,o="
+    force: yes
+  with_items:
+  - bash_aliases
+  - vimrc
+  tags:
+  - xtraz
+
+- name: "Deploy skeleton profile customizations"
+  template:
+    src: "{{ item }}.j2"
+    dest: "/etc/skel/.{{ item }}"
+    owner: root
+    group: root
+    mode: "u=rw,g=r,o=r"
     force: yes
   with_items:
   - bash_aliases

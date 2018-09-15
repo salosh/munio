@@ -72,7 +72,7 @@ zone "{{ nets[cnc_net].cidr | ipaddr('revdns') | regex_replace('^([0]+\\.)*','')
         allow-update { none; };
 };
 
-zone "lb" IN {
+zone "todero.local" IN {
         type forward;
         forward only;
         forwarders {

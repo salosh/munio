@@ -1,14 +1,18 @@
 .:{{ bind_port }} {
 
     bind {{ bind_host }}
+#    bind 0.0.0.0
+
 #  IPV6 is disabled
 #    bind ::1
 
-    etcd lb {
+    etcd todero.local {
         stubzones
         path /todero
         endpoint http://localhost:2379
     }
 
-    loadbalance
+#    loadbalance
+    log
+    errors
 }

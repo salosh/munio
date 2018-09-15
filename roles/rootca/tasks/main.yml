@@ -78,7 +78,7 @@
   shell:
     "{{ item }}"
   with_items:
-  - "openssl genrsa -aes256 -passout file:/root/.ssh/id_rsa -out {{ conf.root_dir }}/private/ca.key 4096"
+  - "openssl genrsa -aes256 -passout file:/root/.ssh/id_rsa -out {{ conf.root_dir }}/private/ca.key 2048"
   - openssl rsa -in {{ conf.root_dir }}/private/ca.key -passin file:/root/.ssh/id_rsa -pubout > {{ conf.root_dir }}/private/ca.pub
   - "chmod 400 {{ conf.root_dir }}/private/ca.key"
   - openssl req -config {{ conf.root_dir }}/openssl.cnf -key {{ conf.root_dir }}/private/ca.key -passin file:/root/.ssh/id_rsa -new -x509 -days 3650 -sha256 -extensions v3_ca -out {{ conf.root_dir }}/certs/ca.crt -subj "/OU=Munio Certificate Authority/CN=Munio Root CA"
@@ -123,7 +123,7 @@
     prefix: "node"
     what_to_sign: "{{ item }}"
     extension:    "client_cert"
-    subject:      "{{ item }}.{{ domain_name }}"
+    subject:      "{{ item }}.node.todero.local"
   include_tasks: "sign.yml"
   with_items:
   - "{{ groups['all'] }}"

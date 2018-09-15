@@ -156,3 +156,8 @@ subjectKeyIdentifier = hash
 authorityKeyIdentifier = keyid,issuer
 keyUsage = critical, digitalSignature
 extendedKeyUsage = critical, OCSPSigning
+
+{% if ca_type == 'intermediate' %}
+[ san_env ]
+subjectAltName=${ENV::SAN}
+{% endif %}

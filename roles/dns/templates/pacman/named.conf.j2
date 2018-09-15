@@ -5,7 +5,7 @@ options {
     pid-file "/run/named/named.pid";
 
     listen-on { {{ bind_host }}; };
-    listen-on-v6 { any; };
+    listen-on-v6 { ::1; };
 
     allow-recursion {
 {% for item in allow_recursion %}
@@ -31,17 +31,21 @@ options {
 {% endfor %}
     };
 
-{% if external_dns is defined and external_dns | length > 0 %}
     forwarders {
+{% if external_dns is defined and external_dns | length > 0 %}
 {%   for dns in external_dns %}
         {{ dns }};
 {%   endfor %}
-    };
 {% endif %}
+    };
 
     version none;
     hostname none;
     server-id none;
+
+    dnssec-enable no;
+    dnssec-validation no;
+    auth-nxdomain no;    # conform to RFC1035
 
     max-cache-ttl 3;
     max-ncache-ttl 3;
@@ -75,10 +79,12 @@ zone "0.in-addr.arpa" IN {
 
 zone "." IN {
     type hint;
-{% if external_dns is defined and external_dns | length > 0 %}
+{% if connectivity_mode == 'online' %}
     file "root.hint";
+#    file "offline.zone";
 {% else %}
-    file "/dev/null";
+#    file "root.hint";
+    file "offline.zone";
 {% endif %}
 };
 
@@ -101,7 +107,7 @@ zone "{{ nets[cnc_net].cidr | ipaddr('revdns') | regex_replace('^([0]+\\.)*','')
 # Consul service-discovery forward zone settings
 {%   set port = 8600 %}
 {% endif %}
-zone "lb" IN {
+zone "todero.local" IN {
         type forward;
         forward only;
         forwarders {
@@ -131,15 +137,15 @@ zone "consul" IN {
         };
 };
 
+# See https://kb.isc.org/docs/aa-01526 for more
 logging {
-    channel xfer-log {
-        file "/var/log/named/named.log" versions 25 size 25m;
-            print-category yes;
-            print-severity yes;
-            severity info;
-            print-time yes;
-        };
-        category xfer-in { xfer-log; };
-        category xfer-out { xfer-log; };
-        category notify { xfer-log; };
+     channel syslog {
+          print-time yes;
+          print-category yes;
+          print-severity yes;
+          syslog daemon;
+          severity debug;
+     };
+     category default {syslog; };
 };
+

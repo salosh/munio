@@ -68,6 +68,7 @@
     mode:  "u=rw,g=rw,o="
     force: yes
   with_items:
+  - offline.zone
   - domain.zone
   - domain.rr.zone
   tags:
@@ -105,8 +106,8 @@
 
 - name: "Deploy resolv.conf"
   template:
-    src:   "./{{ item }}.j2"
-    dest:  "/etc/resolv.conf"
+    src:   "{{ role_path }}/../sysconf/templates/{{ item }}.j2"
+    dest:  "/etc/{{ item }}"
     owner: "root"
     group: "root"
     mode:  "u=rw,g=r,o=r"

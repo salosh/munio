@@ -56,13 +56,14 @@
   - "sysconf_final_op != 'NOP'"
   tags:
   - conf
+  - final_op
 
 #    host={{ ips[cnc_net][inventory_hostname].ip }}
 - name: "Wait for nodes to complete reboot"
   local_action:
     wait_for
-    host={{ hostvars[inventory_hostname].ansible_host }}
-    port={{ hostvars[inventory_hostname].ansible_port }}
+    host={{ hostvars[inventory_hostname].ansible_host | default(inventory_hostname) }}
+    port={{ hostvars[inventory_hostname].ansible_port | default(22) }}
     search_regex="OpenSSH"
     delay=30
     timeout=541
@@ -72,3 +73,5 @@
   - "sysconf_final_op == 'reboot'"
   tags:
   - conf
+  - final_op
+

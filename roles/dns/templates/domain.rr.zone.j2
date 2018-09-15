@@ -14,7 +14,7 @@ $TTL 86400
 
 {% for node in groups['dns-nodes'] %}
 {%   set net = hostvars[node].cnc_net %}
-{{ ips[net][node].ip | ipaddr('revdns') }}     IN	PTR	ns{{ loop.index }}.{{ fqdn }}.
+{{ ips[net][node].ip | ipaddr('revdns') }}     IN	PTR	{{ node }}.{{ fqdn }}.
 {% endfor %}
 
 {% for node in groups['all'] %}
