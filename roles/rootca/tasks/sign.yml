@@ -76,7 +76,7 @@
   - "openssl x509 -in {{ wts_crt }} -text -noout"
   register: item_output
   loop_control:
-    label: "{{ item }} =>\n{{ item_output }}"
+    label: "{{ item }} =>\n{{ item_output.stdout_lines | join('\n') }}"
   tags:
   - verify
   - debug
