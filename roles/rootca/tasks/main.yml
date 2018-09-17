@@ -132,13 +132,19 @@
   tags:
   - init
 
-- name: "Generate Consul service certificates"
+- name: "Generate Clustered service combined certificates"
   vars:
     intermediate_dir: "{{ conf.root_dir }}/intermediate"
-    what_to_sign: "consul"
+    what_to_sign: "{{ cluster_service }}"
     extension:    "combined_cert"
     subject:      "*.{{ domain_name }}"
   include_tasks: "./sign.yml"
+  loop:
+  - "consul"
+  - "etcd"
+  - "etcd-peer"
+  loop_control:
+    loop_var: cluster_service
 
 # TODO FIXME add cert to OS
 # https://bbs.archlinux.org/viewtopic.php?id=166493
