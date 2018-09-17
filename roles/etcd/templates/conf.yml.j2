@@ -7,8 +7,9 @@ name: '{{ inventory_hostname }}'
 data-dir: {{ conf.root_dir }}
 
 # Path to the dedicated wal directory.
-# TODO FIXME
+# Waiting for https://github.com/etcd-io/etcd/issues/10098 to be resolved
 # wal-dir: {{ conf.root_dir }}-wal
+wal-dir: /tmp/etcd-wal
 
 # Number of committed transactions to trigger a snapshot to disk.
 snapshot-count: 10000
