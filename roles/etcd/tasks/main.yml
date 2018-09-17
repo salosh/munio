@@ -135,44 +135,18 @@
   tags:
   - conf
 
-- name: "Create intermediate CA"
-  vars:
-    intermediate_ca_name: "etcd"
-    intermediate_dir: "/var/lib/ca/etcd"
-    encrypt_creds: false
-  include_tasks: "{{ role_path }}/../rootca/tasks/intermediate.yml"
-  delegate_to: "{{ groups['rootca-nodes'][0] }}"
-  run_once: true
-  tags:
-  - init
-
-- name: "Generate Etcd TLS certificates"
-  vars:
-    what_to_sign: "{{ item }}"
-    extension:    "combined_cert"
-    subject:      "*.{{ domain_name }}"
-    intermediate_dir: "/var/lib/ca/etcd"
-  include_tasks: "{{ role_path }}/../rootca/tasks/sign.yml"
-  with_items:
-  - "etcd"
-  - "etcd-peer"
-  delegate_to: "{{ groups['rootca-nodes'][0] }}"
-  run_once: true
-  tags:
-  - init
-
 - name: "Slurp service certificates"
   slurp:
     src: "{{ item }}"
   delegate_to: "{{ groups['rootca-nodes'][0] }}"
   loop:
-  - /var/lib/ca/etcd/certs/ca-chain.crt
-  - /var/lib/ca/etcd/certs/ca.crt
-  - /var/lib/ca/etcd/private/ca.pub
-  - /var/lib/ca/etcd/certs/etcd.crt
-  - /var/lib/ca/etcd/private/etcd.key
-  - /var/lib/ca/etcd/certs/etcd-peer.crt
-  - /var/lib/ca/etcd/private/etcd-peer.key
+  - /var/lib/ca/intermediate/certs/ca-chain.crt
+  - /var/lib/ca/intermediate/certs/ca.crt
+  - /var/lib/ca/intermediate/private/ca.pub
+  - /var/lib/ca/intermediate/certs/etcd.crt
+  - /var/lib/ca/intermediate/private/etcd.key
+  - /var/lib/ca/intermediate/certs/etcd-peer.crt
+  - /var/lib/ca/intermediate/private/etcd-peer.key
   register: service_certificates
 
 - name: "Distribute service certificates to all nodes"
